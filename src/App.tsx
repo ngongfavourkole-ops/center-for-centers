@@ -4,7 +4,8 @@ import { auth, googleProvider, testFirestoreConnection } from './lib/firebase';
 import { isUserAdmin } from './lib/auth';
 import { fetchApprovedOrganizations, fetchApprovedOpportunities } from './lib/firestoreService';
 import { SAMPLE_ORGANIZATIONS, SAMPLE_OPPORTUNITIES } from './data/sampleData';
-import { Organization, Opportunity } from './types';
+import { Organization, Opportunity, NavFilters } from './types';
+import { useLanguage } from './context/LanguageContext';
 import { Logo } from './components/Logo';
 import { HomeView } from './views/HomeView';
 import { OpportunitiesView } from './views/OpportunitiesView';
@@ -28,6 +29,7 @@ import {
 type ActiveTab = 'home' | 'opportunities' | 'organizations' | 'dashboard' | 'admin';
 
 export default function App() {
+  const { t } = useLanguage();
   const [user, setUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
 
@@ -41,11 +43,9 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('home');
   const [selectedOpportunity, setSelectedOpportunity] = useState<Opportunity | null>(null);
   const [selectedOrganization, setSelectedOrganization] = useState<Organization | null>(null);
-  const [opportunityFilters, setOpportunityFilters] = useState<{
-    category?: string;
-    town?: string;
-    cost?: 'free' | 'paid';
-  }>({});
+  const [navFilters, setNavFilters] = useState<NavFilters>({});
+  // Bumped on every navigation so list views remount and pick up new filters
+  const [navKey, setNavKey] = useState(0);
 
   // Auth Listener
   useEffect(() => {
@@ -168,15 +168,12 @@ export default function App() {
   // Switch Tab
   const handleNavigateTab = (
     tab: ActiveTab,
-    filters?: { category?: string; town?: string; cost?: 'free' | 'paid' }
+    filters?: NavFilters
   ) => {
     setSelectedOpportunity(null);
     setSelectedOrganization(null);
-    if (filters) {
-      setOpportunityFilters(filters);
-    } else {
-      setOpportunityFilters({});
-    }
+    setNavFilters(filters || {});
+    setNavKey((k) => k + 1);
     setActiveTab(tab);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -316,7 +313,7 @@ export default function App() {
             <p className="font-heading font-bold text-lg text-[#1C211E]">
               Loading verified centers and opportunities...
             </p>
-            <p className="text-xs text-[#555E57] mt-1">Connecting to Buea network database</p>
+            <p className="text-xs text-[#555E57] mt-1">{t.connecting}</p>
           </div>
         ) : selectedOpportunity ? (
           <OpportunityDetailView
@@ -346,15 +343,20 @@ export default function App() {
           />
         ) : activeTab === 'opportunities' ? (
           <OpportunitiesView
+            key={navKey}
             opportunities={opportunities}
             onSelectOpportunity={handleSelectOpportunity}
-            initialFilters={opportunityFilters}
+            initialFilters={navFilters}
+            onSearchPlaces={(query) => handleNavigateTab('organizations', { query })}
           />
         ) : activeTab === 'organizations' ? (
           <OrganizationsView
+            key={navKey}
             organizations={organizations}
             opportunities={opportunities}
             onSelectOrganization={handleSelectOrganization}
+            initialFilters={navFilters}
+            onSearchOpportunities={(query) => handleNavigateTab('opportunities', { query })}
           />
         ) : activeTab === 'dashboard' && user ? (
           <OrganizationDashboardView
@@ -453,7 +455,7 @@ export default function App() {
               <Logo size="sm" />
             </div>
             <p className="text-[11px] text-[#C4C0B6]">
-              Connecting youth in Buea, Limbe, Tiko, and Kumba to verified learning spaces.
+              {t.footerTagline}
             </p>
           </div>
 

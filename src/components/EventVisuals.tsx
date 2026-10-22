@@ -102,7 +102,7 @@ export const EventFlyerSection: React.FC<EventFlyerProps> = ({ opportunity, clas
           >
             <div>
               <h4 className="font-heading font-bold text-sm sm:text-base truncate max-w-md sm:max-w-xl">
-                {opportunity.title} — Official Flyer
+                {opportunity.title}: Official Flyer
               </h4>
               <p className="text-[11px] text-[#E2DDD5]">
                 {opportunity.orgName || 'Center for Centers'}

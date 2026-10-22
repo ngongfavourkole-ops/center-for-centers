@@ -6,12 +6,21 @@ export type OrgType =
   | 'Educational institution' 
   | 'Other';
 
-export type CameroonTown = 
-  | 'Buea' 
-  | 'Limbe' 
-  | 'Tiko' 
-  | 'Kumba' 
-  | 'Other';
+// Cameroon's 10 regions. Stored in English; labels are translated in the UI.
+export type CameroonRegion =
+  | 'Adamawa'
+  | 'Centre'
+  | 'East'
+  | 'Far North'
+  | 'Littoral'
+  | 'North'
+  | 'Northwest'
+  | 'South'
+  | 'Southwest'
+  | 'West';
+
+// Opportunities can also run online instead of in a region.
+export type OpportunityRegion = CameroonRegion | 'Online';
 
 export type PowerReliability = 
   | 'Backup power available' 
@@ -43,11 +52,20 @@ export type EducationLevel =
 
 export type ApprovalStatus = 'pending' | 'approved' | 'rejected';
 
+// Filters passed when navigating to a list view (from home quick filters or a search).
+export interface NavFilters {
+  category?: string;
+  region?: string;
+  cost?: 'free' | 'paid';
+  query?: string;
+}
+
 export interface Organization {
   id: string; // Document ID = ownerUid
   name: string;
   type: OrgType;
-  town: CameroonTown;
+  region?: CameroonRegion; // Older records may only have a town; see resolveRegion()
+  town: string; // Free text town or city
   address: string;
   contactPhone: string;
   contactEmail: string;
@@ -78,7 +96,8 @@ export interface Opportunity {
   description: string;
   interests: string[];
   educationLevels: EducationLevel[];
-  town: string;
+  region?: OpportunityRegion; // Older records may only have a town; see resolveRegion()
+  town: string; // Free text town or city, may be empty for online
   startDate: string;
   deadline: string;
   cost: number; // 0 means free
@@ -114,6 +133,7 @@ export interface UserProfile {
   preferredLanguage: 'en' | 'fr';
   createdAt: string;
   region?: string;
+  town?: string;
   educationLevel?: string;
   interests?: string[];
   updatedAt?: string;

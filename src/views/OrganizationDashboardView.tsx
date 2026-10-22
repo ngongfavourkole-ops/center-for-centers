@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { User } from 'firebase/auth';
-import { Organization, Opportunity, OrgType, CameroonTown, PowerReliability, InternetReliability, OpportunityCategory, EducationLevel, UserRole } from '../types';
+import { Organization, Opportunity, OrgType, CameroonRegion, OpportunityRegion, PowerReliability, InternetReliability, OpportunityCategory, EducationLevel, UserRole } from '../types';
 import {
   fetchOrgByOwner,
   saveOrganizationProfile,
@@ -11,6 +11,7 @@ import {
 import { StatusBadge, FreeBadge, PaidBadge } from '../components/Badges';
 import { sendToFormspree } from '../lib/formspree';
 import { useLanguage } from '../context/LanguageContext';
+import { CAMEROON_REGIONS, OPPORTUNITY_REGIONS, resolveRegion, editableTown, formatLocation } from '../lib/regions';
 import {
   Building2,
   Plus,
@@ -55,7 +56,8 @@ export const OrganizationDashboardView: React.FC<OrganizationDashboardProps> = (
 
   const [name, setName] = useState('');
   const [type, setType] = useState<OrgType>('Technology hub');
-  const [town, setTown] = useState<CameroonTown>('Buea');
+  const [region, setRegion] = useState<CameroonRegion | ''>('');
+  const [town, setTown] = useState('');
   const [address, setAddress] = useState('');
   const [contactPhone, setContactPhone] = useState('');
   const [contactEmail, setContactEmail] = useState(user.email || '');
@@ -80,7 +82,8 @@ export const OrganizationDashboardView: React.FC<OrganizationDashboardProps> = (
   const [oppDescription, setOppDescription] = useState('');
   const [oppInterests, setOppInterests] = useState<string[]>(['Technology']);
   const [oppEducation, setOppEducation] = useState<EducationLevel[]>(['University']);
-  const [oppTown, setOppTown] = useState('Buea');
+  const [oppRegion, setOppRegion] = useState<OpportunityRegion | ''>('');
+  const [oppTown, setOppTown] = useState('');
   const [oppStartDate, setOppStartDate] = useState('');
   const [oppDeadline, setOppDeadline] = useState('');
   const [oppCost, setOppCost] = useState<number>(0);
@@ -132,7 +135,9 @@ export const OrganizationDashboardView: React.FC<OrganizationDashboardProps> = (
         setOrganization(org);
         setName(org.name || '');
         setType(org.type || 'Technology hub');
-        setTown(org.town || 'Buea');
+        const orgRegion = resolveRegion(org);
+        setRegion(orgRegion && orgRegion !== 'Online' ? orgRegion : '');
+        setTown(editableTown(org.town));
         setAddress(org.address || '');
         setContactPhone(org.contactPhone || '');
         setContactEmail(org.contactEmail || user.email || '');
@@ -191,6 +196,10 @@ export const OrganizationDashboardView: React.FC<OrganizationDashboardProps> = (
       return;
     }
 
+    if (!region) {
+      setErrorMsg(t.regionRequiredError);
+      return;
+    }
     if (!name.trim()) {
       setErrorMsg('Organization name is required.');
       return;
@@ -205,7 +214,8 @@ export const OrganizationDashboardView: React.FC<OrganizationDashboardProps> = (
         {
           name: name.trim(),
           type,
-          town,
+          region: region || undefined,
+          town: town.trim(),
           address: address.trim(),
           contactPhone: contactPhone.trim(),
           contactEmail: contactEmail.trim(),
@@ -231,7 +241,8 @@ export const OrganizationDashboardView: React.FC<OrganizationDashboardProps> = (
         organizationId: user.uid,
         name: name.trim(),
         type,
-        town,
+        region,
+        town: town.trim(),
         address: address.trim(),
         contactPhone: contactPhone.trim(),
         contactEmail: contactEmail.trim(),
@@ -268,7 +279,8 @@ export const OrganizationDashboardView: React.FC<OrganizationDashboardProps> = (
       setOppDescription(opp.description);
       setOppInterests(opp.interests || []);
       setOppEducation(opp.educationLevels || []);
-      setOppTown(opp.town || 'Buea');
+      setOppRegion(resolveRegion(opp) || '');
+      setOppTown(editableTown(opp.town));
       setOppStartDate(opp.startDate || '');
       setOppDeadline(opp.deadline || '');
       setOppCost(opp.cost || 0);
@@ -284,7 +296,8 @@ export const OrganizationDashboardView: React.FC<OrganizationDashboardProps> = (
       setOppDescription('');
       setOppInterests(['Technology']);
       setOppEducation(['University']);
-      setOppTown(town || 'Buea');
+      setOppRegion(region);
+      setOppTown(town);
       setOppStartDate('');
       const d = new Date();
       d.setDate(d.getDate() + 30);
@@ -309,6 +322,10 @@ export const OrganizationDashboardView: React.FC<OrganizationDashboardProps> = (
       return;
     }
 
+    if (!oppRegion) {
+      setErrorMsg(t.regionRequiredError);
+      return;
+    }
     if (!oppTitle.trim() || !oppDeadline) {
       setErrorMsg('Title and deadline are required.');
       return;
@@ -325,7 +342,8 @@ export const OrganizationDashboardView: React.FC<OrganizationDashboardProps> = (
         description: oppDescription.trim(),
         interests: oppInterests,
         educationLevels: oppEducation,
-        town: oppTown,
+        region: oppRegion || undefined,
+        town: oppTown.trim(),
         startDate: oppStartDate,
         deadline: oppDeadline,
         cost: Number(oppCost) || 0,
@@ -348,7 +366,8 @@ export const OrganizationDashboardView: React.FC<OrganizationDashboardProps> = (
         description: oppDescription.trim(),
         interests: oppInterests,
         educationLevels: oppEducation,
-        town: oppTown,
+        region: oppRegion,
+        town: oppTown.trim(),
         startDate: oppStartDate,
         deadline: oppDeadline,
         cost: Number(oppCost) || 0,
@@ -510,20 +529,35 @@ export const OrganizationDashboardView: React.FC<OrganizationDashboardProps> = (
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-[#1C211E] mb-1 uppercase tracking-wider">
-                  Town / City *
+                <label htmlFor="org-region" className="block text-xs font-bold text-[#1C211E] mb-1 uppercase tracking-wider">
+                  {t.regionRequired}
                 </label>
                 <select
-                  value={town}
-                  onChange={e => setTown(e.target.value as CameroonTown)}
+                  id="org-region"
+                  required
+                  value={region}
+                  onChange={e => setRegion(e.target.value as CameroonRegion | '')}
                   className="w-full bg-[#F8F5EE] border border-[#E2DDD5] text-sm rounded-sm px-3 py-2 text-[#1C211E] focus:outline-none focus:border-[#16402E]"
                 >
-                  <option value="Buea">Buea</option>
-                  <option value="Limbe">Limbe</option>
-                  <option value="Tiko">Tiko</option>
-                  <option value="Kumba">Kumba</option>
-                  <option value="Other">Other</option>
+                  <option value="">{t.chooseRegion}</option>
+                  {CAMEROON_REGIONS.map(r => (
+                    <option key={r} value={r}>{t.regionNames[r]}</option>
+                  ))}
                 </select>
+              </div>
+
+              <div>
+                <label htmlFor="org-town" className="block text-xs font-bold text-[#1C211E] mb-1 uppercase tracking-wider">
+                  {t.townField}
+                </label>
+                <input
+                  id="org-town"
+                  type="text"
+                  value={town}
+                  onChange={e => setTown(e.target.value)}
+                  placeholder={t.townPlaceholder}
+                  className="w-full bg-[#F8F5EE] border border-[#E2DDD5] text-sm rounded-sm px-3 py-2 text-[#1C211E] focus:outline-none focus:border-[#16402E]"
+                />
               </div>
 
               <div className="sm:col-span-2">
@@ -535,7 +569,7 @@ export const OrganizationDashboardView: React.FC<OrganizationDashboardProps> = (
                   required
                   value={address}
                   onChange={e => setAddress(e.target.value)}
-                  placeholder="e.g. Molyko Boulevard, Opposite UB Junction, Buea"
+                  placeholder={t.addressPlaceholder}
                   className="w-full bg-[#F8F5EE] border border-[#E2DDD5] text-sm rounded-sm px-3 py-2 text-[#1C211E] focus:outline-none focus:border-[#16402E]"
                 />
               </div>
@@ -834,7 +868,7 @@ export const OrganizationDashboardView: React.FC<OrganizationDashboardProps> = (
                         <Calendar size={13} className="text-[#D95D39]" />
                         Deadline: {opp.deadline}
                       </span>
-                      <span>Town: {opp.town}</span>
+                      <span>{formatLocation(opp, t)}</span>
                     </div>
                   </div>
 
@@ -940,15 +974,33 @@ export const OrganizationDashboardView: React.FC<OrganizationDashboardProps> = (
                 </div>
 
                 <div>
-                  <label className="block font-bold text-[#1C211E] mb-1 uppercase tracking-wider">
-                    Town or "Online" *
+                  <label htmlFor="opp-form-region" className="block font-bold text-[#1C211E] mb-1 uppercase tracking-wider">
+                    {t.regionOrOnline}
+                  </label>
+                  <select
+                    id="opp-form-region"
+                    required
+                    value={oppRegion}
+                    onChange={e => setOppRegion(e.target.value as OpportunityRegion | '')}
+                    className="w-full bg-[#F8F5EE] border border-[#E2DDD5] rounded-sm px-3 py-2 text-xs text-[#1C211E] focus:outline-none focus:border-[#16402E]"
+                  >
+                    <option value="">{t.chooseRegion}</option>
+                    {OPPORTUNITY_REGIONS.map(r => (
+                      <option key={r} value={r}>{r === 'Online' ? t.online : t.regionNames[r]}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label htmlFor="opp-form-town" className="block font-bold text-[#1C211E] mb-1 uppercase tracking-wider">
+                    {t.townField}
                   </label>
                   <input
+                    id="opp-form-town"
                     type="text"
-                    required
                     value={oppTown}
                     onChange={e => setOppTown(e.target.value)}
-                    placeholder="e.g. Buea or Online"
+                    placeholder={t.townPlaceholder}
                     className="w-full bg-[#F8F5EE] border border-[#E2DDD5] rounded-sm px-3 py-2 text-xs text-[#1C211E] focus:outline-none focus:border-[#16402E]"
                   />
                 </div>

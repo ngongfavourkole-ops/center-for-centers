@@ -1,5 +1,7 @@
 import React from 'react';
 import { ApprovalStatus } from '../types';
+import { useLanguage } from '../context/LanguageContext';
+import { formatLocation } from '../lib/regions';
 
 export const FreeBadge: React.FC<{ className?: string }> = ({ className = '' }) => (
   <span className={`inline-flex items-center text-[11px] font-bold tracking-wide uppercase px-2 py-0.5 rounded-sm bg-[#16402E] text-[#F8F5EE] border border-[#16402E] ${className}`}>
@@ -56,8 +58,16 @@ export const CategoryBadge: React.FC<{ category: string; className?: string }> =
   </span>
 );
 
-export const TownBadge: React.FC<{ town: string; className?: string }> = ({ town, className = '' }) => (
-  <span className={`inline-flex items-center text-[11px] font-semibold px-2 py-0.5 rounded-sm bg-[#F8F5EE] text-[#16402E] border border-[#16402E]/30 ${className}`}>
-    {town}
-  </span>
-);
+export const LocationBadge: React.FC<{ item: { region?: string; town?: string }; className?: string }> = ({
+  item,
+  className = '',
+}) => {
+  const { t } = useLanguage();
+  const label = formatLocation(item, t);
+  if (!label) return null;
+  return (
+    <span className={`inline-flex items-center text-[11px] font-semibold px-2 py-0.5 rounded-sm bg-[#F8F5EE] text-[#16402E] border border-[#16402E]/30 ${className}`}>
+      {label}
+    </span>
+  );
+};

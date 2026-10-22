@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { Opportunity, Organization } from '../types';
+import { Opportunity, Organization, NavFilters } from '../types';
+import { useLanguage } from '../context/LanguageContext';
+import { CAMEROON_REGIONS } from '../lib/regions';
 import { OpportunityCard } from '../components/OpportunityCard';
 import { OrganizationCard } from '../components/OrganizationCard';
 import { ContourMotifBackground } from '../components/Logo';
@@ -10,7 +12,7 @@ interface HomeViewProps {
   organizations: Organization[];
   onSelectOpportunity: (opp: Opportunity) => void;
   onSelectOrganization: (org: Organization) => void;
-  onNavigateTab: (tab: 'opportunities' | 'organizations', filters?: { category?: string; town?: string; cost?: 'free' | 'paid' }) => void;
+  onNavigateTab: (tab: 'opportunities' | 'organizations', filters?: NavFilters) => void;
 }
 
 export const HomeView: React.FC<HomeViewProps> = ({
@@ -20,7 +22,9 @@ export const HomeView: React.FC<HomeViewProps> = ({
   onSelectOrganization,
   onNavigateTab,
 }) => {
+  const { t } = useLanguage();
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchRegion, setSearchRegion] = useState('');
 
   const now = new Date();
   const todayStr = now.toISOString().split('T')[0];
@@ -45,9 +49,10 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (searchQuery.trim()) {
-      onNavigateTab('opportunities');
-    }
+    onNavigateTab('opportunities', {
+      query: searchQuery.trim() || undefined,
+      region: searchRegion || undefined,
+    });
   };
 
   return (
@@ -58,7 +63,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
         <div className="max-w-4xl mx-auto relative z-10">
           <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-sm bg-[#0F2D20] border border-[#215A42] text-[11px] font-bold text-[#EFE9DC] uppercase tracking-wider mb-3">
             <span className="w-2 h-2 rounded-full bg-[#D95D39]" />
-            Buea & Mount Cameroon Network
+            {t.acrossCameroon}
           </div>
 
           <h1 className="font-heading font-extrabold text-2xl sm:text-4xl lg:text-5xl tracking-tight leading-tight mb-3">
@@ -66,27 +71,39 @@ export const HomeView: React.FC<HomeViewProps> = ({
           </h1>
 
           <p className="text-sm sm:text-base text-[#E2DDD5] max-w-2xl leading-relaxed mb-6">
-            Find learning centers, tech hubs, NGOs, and training providers in Buea, Limbe, Tiko, and Kumba. Check realistic access: real costs, backup power, internet reliability, and open doors before you leave home.
+            {t.heroDescription}
           </p>
 
-          <form onSubmit={handleSearchSubmit} className="flex flex-col sm:flex-row gap-2 max-w-2xl">
-            <div className="relative flex-1">
-              <Search size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#555E57]" />
+          <form onSubmit={handleSearchSubmit} role="search" className="flex flex-col sm:flex-row gap-2 max-w-3xl">
+            <div className="relative flex-1 min-w-0">
+              <Search size={18} aria-hidden="true" className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#555E57]" />
               <input
-                type="text"
+                type="search"
+                enterKeyHint="search"
+                aria-label={t.searchButton}
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                placeholder="Search bootcamps, solar training, robotics, internships..."
+                placeholder={t.homeSearchPlaceholder}
                 className="w-full pl-10 pr-4 py-3 bg-white text-[#1C211E] text-sm rounded-sm placeholder:text-[#777E79] border-2 border-white focus:outline-none focus:border-[#D95D39]"
               />
             </div>
+            <select
+              value={searchRegion}
+              onChange={e => setSearchRegion(e.target.value)}
+              aria-label={t.regionField}
+              className="sm:w-44 px-3 py-3 bg-white text-[#1C211E] text-sm rounded-sm border-2 border-white focus:outline-none focus:border-[#D95D39]"
+            >
+              <option value="">{t.allRegions}</option>
+              {CAMEROON_REGIONS.map(r => (
+                <option key={r} value={r}>{t.regionNames[r]}</option>
+              ))}
+            </select>
             <button
-              type="button"
-              onClick={() => onNavigateTab('opportunities')}
+              type="submit"
               className="px-6 py-3 bg-[#D95D39] hover:bg-[#B84725] text-white font-bold text-sm rounded-sm transition-colors flex items-center justify-center gap-2 border border-[#B84725]"
             >
-              <span>Explore all</span>
-              <ArrowRight size={16} />
+              <span>{t.searchButton}</span>
+              <ArrowRight size={16} aria-hidden="true" />
             </button>
           </form>
 
@@ -117,16 +134,10 @@ export const HomeView: React.FC<HomeViewProps> = ({
               Hackathons
             </button>
             <button
-              onClick={() => onNavigateTab('opportunities', { town: 'Buea' })}
+              onClick={() => onNavigateTab('opportunities', { region: 'Online' })}
               className="px-2.5 py-1 bg-[#0F2D20] hover:bg-[#215A42] text-white rounded-sm border border-[#2B543D] text-[11px] font-semibold transition-colors"
             >
-              Buea
-            </button>
-            <button
-              onClick={() => onNavigateTab('opportunities', { town: 'Limbe' })}
-              className="px-2.5 py-1 bg-[#0F2D20] hover:bg-[#215A42] text-white rounded-sm border border-[#2B543D] text-[11px] font-semibold transition-colors"
-            >
-              Limbe
+              {t.online}
             </button>
           </div>
         </div>

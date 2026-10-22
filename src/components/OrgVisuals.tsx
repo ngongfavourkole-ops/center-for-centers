@@ -1,5 +1,7 @@
 import React from 'react';
 import { Organization } from '../types';
+import { useLanguage } from '../context/LanguageContext';
+import { formatLocation } from '../lib/regions';
 import { Building2 } from 'lucide-react';
 
 interface OrgLogoProps {
@@ -171,6 +173,7 @@ export const OrgPicture: React.FC<OrgPictureProps> = ({
     square: 'aspect-square',
   };
 
+  const { t } = useLanguage();
   const name = organization.name.toLowerCase();
 
   // Map to generated authentic Cameroon photos if not explicitly set
@@ -204,7 +207,7 @@ export const OrgPicture: React.FC<OrgPictureProps> = ({
         <div className="absolute bottom-0 inset-x-0 bg-[#16402E]/90 text-white px-3 py-1.5 flex items-center justify-between text-xs">
           <span className="font-bold truncate text-[11px]">{organization.name}</span>
           <span className="text-[10px] bg-[#0F2D20] text-[#E2DDD5] px-1.5 py-0.5 rounded-sm font-semibold shrink-0">
-            {organization.town}
+            {formatLocation(organization, t)}
           </span>
         </div>
       )}

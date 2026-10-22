@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { Opportunity, Organization } from '../types';
-import { FreeBadge, PaidBadge, ClosingSoonBadge, SampleDataBadge, CategoryBadge, TownBadge } from '../components/Badges';
+import { FreeBadge, PaidBadge, ClosingSoonBadge, SampleDataBadge, CategoryBadge, LocationBadge } from '../components/Badges';
 import { ShareButton } from '../components/ShareButton';
 import { ReportModal } from '../components/ReportModal';
 import { OrgLogo } from '../components/OrgVisuals';
 import { EventFlyerSection } from '../components/EventVisuals';
+import { useLanguage } from '../context/LanguageContext';
+import { formatLocation } from '../lib/regions';
 import { ArrowLeft, ExternalLink, Calendar, MapPin, Building2, AlertTriangle, UserCheck, CheckCircle2 } from 'lucide-react';
 
 interface OpportunityDetailViewProps {
@@ -20,6 +22,7 @@ export const OpportunityDetailView: React.FC<OpportunityDetailViewProps> = ({
   onBack,
   onSelectOrganization,
 }) => {
+  const { t } = useLanguage();
   const [showReportModal, setShowReportModal] = useState(false);
 
   const isFree = opportunity.cost === 0;
@@ -58,7 +61,7 @@ export const OpportunityDetailView: React.FC<OpportunityDetailViewProps> = ({
         <div className="flex items-center gap-2">
           <ShareButton
             title={opportunity.title}
-            text={`Check out this ${opportunity.category} in ${opportunity.town}: ${opportunity.title}`}
+            text={`Check out this ${opportunity.category} in ${formatLocation(opportunity, t)}: ${opportunity.title}`}
           />
           <button
             onClick={() => setShowReportModal(true)}
@@ -75,7 +78,7 @@ export const OpportunityDetailView: React.FC<OpportunityDetailViewProps> = ({
         <div className="flex flex-wrap items-center gap-2">
           {isFree ? <FreeBadge /> : <PaidBadge cost={opportunity.cost} />}
           <CategoryBadge category={opportunity.category} />
-          <TownBadge town={opportunity.town} />
+          <LocationBadge item={opportunity} />
           {isClosingSoon && <ClosingSoonBadge daysLeft={daysLeft} />}
           {opportunity.isSample && <SampleDataBadge />}
         </div>
@@ -124,7 +127,7 @@ export const OpportunityDetailView: React.FC<OpportunityDetailViewProps> = ({
               <span>Location</span>
             </div>
             <div className="font-bold text-[#1C211E] text-sm">
-              {opportunity.town}
+              {formatLocation(opportunity, t)}
             </div>
           </div>
         </div>
@@ -234,7 +237,7 @@ export const OpportunityDetailView: React.FC<OpportunityDetailViewProps> = ({
                     <span className="text-xs font-bold text-[#16402E] bg-[#E8EFEA] px-2 py-0.5 rounded-sm">
                       {organization.type}
                     </span>
-                    <span className="text-xs text-[#555E57]">{organization.town}</span>
+                    <span className="text-xs text-[#555E57]">{formatLocation(organization, t)}</span>
                   </div>
                   <h3 className="font-heading font-bold text-base text-[#1C211E] group-hover:text-[#16402E]">
                     {organization.name}

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { User } from 'firebase/auth';
-import { UserProfile, CameroonTown, EducationLevel } from '../types';
+import { UserProfile, EducationLevel } from '../types';
+import { CAMEROON_REGIONS, isCameroonRegion, guessRegionFromTown, editableTown } from '../lib/regions';
 import { updateUserProfile } from '../lib/firestoreService';
 import { sendToFormspree } from '../lib/formspree';
 import { useLanguage } from '../context/LanguageContext';
@@ -36,7 +37,13 @@ export const StudentDashboardView: React.FC<StudentDashboardViewProps> = ({
   const { t, language, setLanguage } = useLanguage();
 
   // Profile Settings form state
-  const [region, setRegion] = useState(userProfile?.region || 'Buea');
+  // Older profiles stored a town (e.g. "Buea") in region; map it to its region
+  const initialRegion = (p: UserProfile | null) =>
+    isCameroonRegion(p?.region) ? p!.region! : guessRegionFromTown(p?.region) || '';
+  const initialTown = (p: UserProfile | null) =>
+    p?.town || (isCameroonRegion(p?.region) ? '' : editableTown(p?.region));
+  const [region, setRegion] = useState<string>(initialRegion(userProfile));
+  const [town, setTown] = useState<string>(initialTown(userProfile));
   const [educationLevel, setEducationLevel] = useState<EducationLevel>(
     (userProfile?.educationLevel as EducationLevel) || 'University'
   );
@@ -54,14 +61,14 @@ export const StudentDashboardView: React.FC<StudentDashboardViewProps> = ({
 
   useEffect(() => {
     if (userProfile) {
-      if (userProfile.region) setRegion(userProfile.region);
+      setRegion(initialRegion(userProfile));
+      setTown(initialTown(userProfile));
       if (userProfile.educationLevel) setEducationLevel(userProfile.educationLevel as EducationLevel);
       if (userProfile.interests) setSelectedInterests(userProfile.interests);
       if (userProfile.preferredLanguage) setPreferredLang(userProfile.preferredLanguage);
     }
   }, [userProfile]);
 
-  const availableRegions: CameroonTown[] = ['Buea', 'Limbe', 'Tiko', 'Kumba', 'Other'];
 
   const availableEducation: EducationLevel[] = [
     'Secondary school',
@@ -101,6 +108,7 @@ export const StudentDashboardView: React.FC<StudentDashboardViewProps> = ({
     try {
       const updatedData: Partial<UserProfile> = {
         region,
+        town: town.trim(),
         educationLevel,
         interests: selectedInterests,
         preferredLanguage: preferredLang,
@@ -128,6 +136,7 @@ export const StudentDashboardView: React.FC<StudentDashboardViewProps> = ({
           displayName: user.displayName || 'Student',
           email: user.email,
           region,
+          town: town.trim(),
           educationLevel,
           interests: selectedInterests,
           preferredLanguage: preferredLang,
@@ -381,23 +390,41 @@ export const StudentDashboardView: React.FC<StudentDashboardViewProps> = ({
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            {/* Region / Town */}
+            {/* Region */}
             <div className="space-y-1.5">
-              <label className="block text-xs font-bold text-[#1C211E] uppercase tracking-wide flex items-center gap-1.5">
+              <label htmlFor="student-region" className="block text-xs font-bold text-[#1C211E] uppercase tracking-wide flex items-center gap-1.5">
                 <MapPin size={14} className="text-[#16402E]" />
-                <span>{t.regionLabel}</span>
+                <span>{t.regionField}</span>
               </label>
               <select
+                id="student-region"
                 value={region}
                 onChange={(e) => setRegion(e.target.value)}
                 className="w-full px-3 py-2 text-xs bg-white border border-[#DDD6C8] rounded-sm focus:outline-none focus:border-[#16402E]"
               >
-                {availableRegions.map((town) => (
-                  <option key={town} value={town}>
-                    {town}
+                <option value="">{t.chooseRegion}</option>
+                {CAMEROON_REGIONS.map((r) => (
+                  <option key={r} value={r}>
+                    {t.regionNames[r]}
                   </option>
                 ))}
               </select>
+            </div>
+
+            {/* Town */}
+            <div className="space-y-1.5">
+              <label htmlFor="student-town" className="block text-xs font-bold text-[#1C211E] uppercase tracking-wide flex items-center gap-1.5">
+                <MapPin size={14} className="text-[#16402E]" />
+                <span>{t.townField}</span>
+              </label>
+              <input
+                id="student-town"
+                type="text"
+                value={town}
+                onChange={(e) => setTown(e.target.value)}
+                placeholder={t.townPlaceholder}
+                className="w-full px-3 py-2 text-xs bg-white border border-[#DDD6C8] rounded-sm focus:outline-none focus:border-[#16402E]"
+              />
             </div>
 
             {/* Education level */}

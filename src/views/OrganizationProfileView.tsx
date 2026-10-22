@@ -2,10 +2,12 @@ import React, { useState } from 'react';
 import { Organization, Opportunity } from '../types';
 import { RealAccessPanel } from '../components/RealAccessPanel';
 import { OpportunityCard } from '../components/OpportunityCard';
-import { SampleDataBadge, TownBadge } from '../components/Badges';
+import { SampleDataBadge, LocationBadge } from '../components/Badges';
 import { ShareButton } from '../components/ShareButton';
 import { ReportModal } from '../components/ReportModal';
 import { OrgLogo, OrgPicture } from '../components/OrgVisuals';
+import { useLanguage } from '../context/LanguageContext';
+import { formatLocation } from '../lib/regions';
 import { ArrowLeft, MapPin, Phone, Mail, Globe, AlertTriangle, Building2, Sparkles, Camera } from 'lucide-react';
 
 interface OrganizationProfileViewProps {
@@ -21,6 +23,7 @@ export const OrganizationProfileView: React.FC<OrganizationProfileViewProps> = (
   onBack,
   onSelectOpportunity,
 }) => {
+  const { t } = useLanguage();
   const [showReportModal, setShowReportModal] = useState(false);
 
   const orgOpportunities = opportunities.filter(
@@ -41,7 +44,7 @@ export const OrganizationProfileView: React.FC<OrganizationProfileViewProps> = (
         <div className="flex items-center gap-2">
           <ShareButton
             title={organization.name}
-            text={`Access details and facilities for ${organization.name} in ${organization.town}`}
+            text={`Access details and facilities for ${organization.name} in ${formatLocation(organization, t)}`}
           />
           <button
             onClick={() => setShowReportModal(true)}
@@ -68,7 +71,7 @@ export const OrganizationProfileView: React.FC<OrganizationProfileViewProps> = (
             <span className="text-xs font-bold px-2.5 py-0.5 rounded-sm bg-[#16402E] text-white border border-[#16402E]">
               {organization.type}
             </span>
-            <TownBadge town={organization.town} />
+            <LocationBadge item={organization} />
             {organization.isSample && <SampleDataBadge />}
           </div>
           <div className="absolute bottom-2 right-2 bg-[#16402E]/85 text-white text-[10px] px-2 py-0.5 rounded-sm font-semibold flex items-center gap-1">

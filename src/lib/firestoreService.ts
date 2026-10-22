@@ -295,6 +295,7 @@ export async function createUserProfile(profile: UserProfile): Promise<void> {
       preferredLanguage: profile.preferredLanguage || 'en',
       createdAt: profile.createdAt || new Date().toISOString(),
       region: profile.region || '',
+      town: profile.town || '',
       educationLevel: profile.educationLevel || '',
       interests: profile.interests || [],
     });

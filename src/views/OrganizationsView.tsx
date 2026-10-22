@@ -1,57 +1,79 @@
 import React, { useState, useMemo } from 'react';
-import { Organization, Opportunity } from '../types';
+import { Organization, Opportunity, NavFilters } from '../types';
 import { OrganizationCard } from '../components/OrganizationCard';
 import { Search, RotateCcw } from 'lucide-react';
+import { useLanguage } from '../context/LanguageContext';
+import { CAMEROON_REGIONS, resolveRegion, normalizeText } from '../lib/regions';
+import { matchesQuery } from '../lib/search';
+import { translations } from '../lib/translations';
 
 interface OrganizationsViewProps {
   organizations: Organization[];
   opportunities: Opportunity[];
   onSelectOrganization: (org: Organization) => void;
+  initialFilters?: NavFilters;
+  onSearchOpportunities?: (query: string) => void;
 }
 
 export const OrganizationsView: React.FC<OrganizationsViewProps> = ({
   organizations,
   opportunities,
   onSelectOrganization,
+  initialFilters,
+  onSearchOpportunities,
 }) => {
-  const [searchQuery, setSearchQuery] = useState('');
+  const { t } = useLanguage();
+  const [searchQuery, setSearchQuery] = useState(initialFilters?.query || '');
   const [selectedType, setSelectedType] = useState('All');
-  const [selectedTown, setSelectedTown] = useState('All');
+  const [selectedRegion, setSelectedRegion] = useState(initialFilters?.region || 'All');
+  const [townFilter, setTownFilter] = useState('');
 
   const typesList = ['All', 'Learning center', 'Training provider', 'NGO', 'Technology hub', 'Educational institution', 'Other'];
-  const townsList = ['All', 'Buea', 'Limbe', 'Tiko', 'Kumba', 'Other'];
 
   const filteredOrganizations = useMemo(() => {
     return organizations.filter(org => {
+      const region = resolveRegion(org);
+
       if (searchQuery.trim()) {
-        const query = searchQuery.toLowerCase();
-        const matchesName = org.name.toLowerCase().includes(query);
-        const matchesDesc = org.description.toLowerCase().includes(query);
-        const matchesAddress = org.address.toLowerCase().includes(query);
-        const matchesFacilities = org.facilities?.some(f => f.toLowerCase().includes(query));
-        if (!matchesName && !matchesDesc && !matchesAddress && !matchesFacilities) {
-          return false;
-        }
+        // Region names in both languages so "Sud-Ouest" and "Southwest" both match
+        const regionWords = region && region !== 'Online' ? [region, translations.fr.regionNames[region]] : [];
+        const matches = matchesQuery(searchQuery, [
+          org.name,
+          org.description,
+          org.address,
+          org.town,
+          org.type,
+          org.fees,
+          org.studentAccess,
+          ...(org.facilities || []),
+          ...regionWords,
+        ]);
+        if (!matches) return false;
       }
 
       if (selectedType !== 'All' && org.type !== selectedType) {
         return false;
       }
 
-      if (selectedTown !== 'All' && org.town !== selectedTown) {
+      if (selectedRegion !== 'All' && region !== selectedRegion) {
+        return false;
+      }
+
+      if (townFilter.trim() && !normalizeText(org.town).includes(normalizeText(townFilter))) {
         return false;
       }
 
       return true;
     });
-  }, [organizations, searchQuery, selectedType, selectedTown]);
+  }, [organizations, searchQuery, selectedType, selectedRegion, townFilter]);
 
-  const hasActiveFilters = searchQuery !== '' || selectedType !== 'All' || selectedTown !== 'All';
+  const hasActiveFilters = searchQuery !== '' || selectedType !== 'All' || selectedRegion !== 'All' || townFilter !== '';
 
   const resetFilters = () => {
     setSearchQuery('');
     setSelectedType('All');
-    setSelectedTown('All');
+    setSelectedRegion('All');
+    setTownFilter('');
   };
 
   return (
@@ -61,7 +83,7 @@ export const OrganizationsView: React.FC<OrganizationsViewProps> = ({
           Centers & Educational Hubs
         </h1>
         <p className="text-xs sm:text-sm text-[#445048] mt-1">
-          Explore youth-ready innovation hubs, labs, NGOs, and vocational centers across Buea, Limbe, Tiko, and Kumba.
+          {t.placesSubtitle}
         </p>
       </div>
 
@@ -70,7 +92,9 @@ export const OrganizationsView: React.FC<OrganizationsViewProps> = ({
           <div className="relative flex-1">
             <Search size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#555E57]" />
             <input
-              type="text"
+              type="search"
+              enterKeyHint="search"
+              aria-label={t.searchButton}
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               placeholder="Search by center name, address, or equipment..."
@@ -78,9 +102,10 @@ export const OrganizationsView: React.FC<OrganizationsViewProps> = ({
             />
           </div>
 
-          <div className="flex gap-2">
-            <div className="w-40 sm:w-48">
+          <div className="grid grid-cols-1 min-[400px]:grid-cols-3 gap-2 sm:flex">
+            <div className="sm:w-44">
               <select
+                aria-label="Type"
                 value={selectedType}
                 onChange={e => setSelectedType(e.target.value)}
                 className="w-full bg-[#F8F5EE] border border-[#E2DDD5] rounded-sm px-3 py-2 text-xs text-[#1C211E] focus:outline-none focus:border-[#16402E]"
@@ -91,16 +116,29 @@ export const OrganizationsView: React.FC<OrganizationsViewProps> = ({
               </select>
             </div>
 
-            <div className="w-32 sm:w-36">
+            <div className="sm:w-40">
               <select
-                value={selectedTown}
-                onChange={e => setSelectedTown(e.target.value)}
+                aria-label={t.regionField}
+                value={selectedRegion}
+                onChange={e => setSelectedRegion(e.target.value)}
                 className="w-full bg-[#F8F5EE] border border-[#E2DDD5] rounded-sm px-3 py-2 text-xs text-[#1C211E] focus:outline-none focus:border-[#16402E]"
               >
-                {townsList.map(t => (
-                  <option key={t} value={t}>{t === 'All' ? 'All Towns' : t}</option>
+                <option value="All">{t.allRegions}</option>
+                {CAMEROON_REGIONS.map(r => (
+                  <option key={r} value={r}>{t.regionNames[r]}</option>
                 ))}
               </select>
+            </div>
+
+            <div className="sm:w-36">
+              <input
+                type="text"
+                aria-label={t.townField}
+                value={townFilter}
+                onChange={e => setTownFilter(e.target.value)}
+                placeholder={t.townFilterPlaceholder}
+                className="w-full bg-[#F8F5EE] border border-[#E2DDD5] rounded-sm px-3 py-2 text-xs text-[#1C211E] focus:outline-none focus:border-[#16402E]"
+              />
             </div>
           </div>
         </div>
@@ -148,14 +186,24 @@ export const OrganizationsView: React.FC<OrganizationsViewProps> = ({
             <p className="text-xs text-[#555E57] mb-4">
               Try clearing the search query or selecting a different town.
             </p>
-            {hasActiveFilters && (
-              <button
-                onClick={resetFilters}
-                className="px-4 py-2 bg-[#16402E] text-white text-xs font-bold rounded-sm border border-[#0F2D20]"
-              >
-                Clear filters
-              </button>
-            )}
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-2">
+              {hasActiveFilters && (
+                <button
+                  onClick={resetFilters}
+                  className="px-4 py-2 bg-[#16402E] text-white text-xs font-bold rounded-sm border border-[#0F2D20]"
+                >
+                  Clear filters
+                </button>
+              )}
+              {searchQuery.trim() && onSearchOpportunities && (
+                <button
+                  onClick={() => onSearchOpportunities(searchQuery.trim())}
+                  className="px-4 py-2 bg-white text-[#16402E] text-xs font-bold rounded-sm border border-[#16402E] break-words max-w-full"
+                >
+                  {t.searchOpportunitiesInstead.replace('{query}', searchQuery.trim())}
+                </button>
+              )}
+            </div>
           </div>
         )}
       </div>

@@ -18,7 +18,44 @@ export const translations = {
     adminRole: 'Administrator',
     offlineNotice: 'You are currently offline. Viewing cached centers and opportunities.',
     loading: 'Loading verified centers and opportunities...',
-    connecting: 'Connecting to Buea network database',
+    connecting: 'Connecting to the Center for Centers database',
+
+    // Nationwide scope and locations
+    acrossCameroon: 'Across Cameroon',
+    heroDescription: 'Find learning centers, cyber cafes, labs, study spaces, hubs and NGOs in all 10 regions of Cameroon. Check realistic access: real costs, backup power, internet reliability, and open doors before you leave home.',
+    footerTagline: 'Connecting youth in all 10 regions of Cameroon to verified learning spaces and opportunities.',
+    placesSubtitle: 'Explore learning centers, cyber cafes, labs, study spaces, hubs and NGOs across Cameroon.',
+    regionField: 'Region',
+    regionRequired: 'Region *',
+    chooseRegion: 'Choose a region',
+    allRegions: 'All regions',
+    townField: 'Town or city',
+    townPlaceholder: 'e.g. Buea, Bamenda, Garoua',
+    townFilterPlaceholder: 'Any town',
+    online: 'Online',
+    regionOrOnline: 'Region or online *',
+    addressPlaceholder: 'e.g. Street name, nearest landmark, neighbourhood',
+    regionRequiredError: 'Please choose a region.',
+    regionNames: {
+      Adamawa: 'Adamawa',
+      Centre: 'Centre',
+      East: 'East',
+      'Far North': 'Far North',
+      Littoral: 'Littoral',
+      North: 'North',
+      Northwest: 'Northwest',
+      South: 'South',
+      Southwest: 'Southwest',
+      West: 'West',
+    } as Record<string, string>,
+
+    // Search
+    searchButton: 'Search',
+    homeSearchPlaceholder: 'Search trainings, cyber cafes, scholarships, internships...',
+    searchPlacesInstead: 'Search places for "{query}"',
+    searchOpportunitiesInstead: 'Search opportunities for "{query}"',
+    reportTeamReview: 'Our admin team will review this notice promptly.',
+    shareDiscovered: 'Discovered via Center for Centers:',
 
     // Role selection modal
     roleModalTitle: 'Welcome to Center for Centers',
@@ -42,7 +79,7 @@ export const translations = {
 
     placesIFollow: 'Places I follow',
     followingEmptyTitle: 'You are not following any places yet',
-    followingEmptyDesc: 'Follow learning hubs in Buea, Limbe, Tiko, and Kumba to get notified of new workshops and resources.',
+    followingEmptyDesc: 'Follow learning hubs across Cameroon to get notified of new workshops and resources.',
 
     registeredEvents: 'Registered events',
     eventsEmptyTitle: 'No registered events yet',
@@ -116,7 +153,44 @@ export const translations = {
     adminRole: 'Administrateur',
     offlineNotice: 'Vous etes actuellement hors ligne. Consultation des centres et opportunites en cache.',
     loading: 'Chargement des centres et opportunites verifies...',
-    connecting: 'Connexion a la base de donnees du reseau de Buea',
+    connecting: 'Connexion à la base de données de Center for Centers',
+
+    // Nationwide scope and locations
+    acrossCameroon: 'Partout au Cameroun',
+    heroDescription: 'Trouvez des centres de formation, cybercafés, laboratoires, espaces d’étude, hubs et ONG dans les 10 régions du Cameroun. Vérifiez l’accès réel : coûts, électricité de secours, fiabilité d’Internet et horaires d’ouverture avant de partir.',
+    footerTagline: 'Relier les jeunes des 10 régions du Cameroun à des lieux d’apprentissage et des opportunités vérifiés.',
+    placesSubtitle: 'Explorez des centres de formation, cybercafés, laboratoires, espaces d’étude, hubs et ONG partout au Cameroun.',
+    regionField: 'Région',
+    regionRequired: 'Région *',
+    chooseRegion: 'Choisir une région',
+    allRegions: 'Toutes les régions',
+    townField: 'Ville ou localité',
+    townPlaceholder: 'ex. Buea, Bamenda, Garoua',
+    townFilterPlaceholder: 'Toutes les villes',
+    online: 'En ligne',
+    regionOrOnline: 'Région ou en ligne *',
+    addressPlaceholder: 'ex. Nom de la rue, repère le plus proche, quartier',
+    regionRequiredError: 'Veuillez choisir une région.',
+    regionNames: {
+      Adamawa: 'Adamaoua',
+      Centre: 'Centre',
+      East: 'Est',
+      'Far North': 'Extrême-Nord',
+      Littoral: 'Littoral',
+      North: 'Nord',
+      Northwest: 'Nord-Ouest',
+      South: 'Sud',
+      Southwest: 'Sud-Ouest',
+      West: 'Ouest',
+    } as Record<string, string>,
+
+    // Search
+    searchButton: 'Rechercher',
+    homeSearchPlaceholder: 'Rechercher des formations, cybercafés, bourses, stages...',
+    searchPlacesInstead: 'Rechercher des lieux pour « {query} »',
+    searchOpportunitiesInstead: 'Rechercher des opportunités pour « {query} »',
+    reportTeamReview: 'Notre équipe d’administration examinera ce signalement rapidement.',
+    shareDiscovered: 'Découvert via Center for Centers :',
 
     // Role selection modal
     roleModalTitle: 'Bienvenue sur Center for Centers',
@@ -140,7 +214,7 @@ export const translations = {
 
     placesIFollow: 'Lieux que je suis',
     followingEmptyTitle: 'Vous ne suivez aucun lieu pour le moment',
-    followingEmptyDesc: 'Suivez les centres a Buea, Limbe, Tiko et Kumba pour etre informe des nouveaux ateliers et ressources.',
+    followingEmptyDesc: 'Suivez des centres partout au Cameroun pour être informé des nouveaux ateliers et ressources.',
 
     registeredEvents: 'Evenements inscrits',
     eventsEmptyTitle: 'Aucun evenement inscrit pour le moment',

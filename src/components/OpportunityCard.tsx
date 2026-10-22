@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Opportunity } from '../types';
-import { FreeBadge, PaidBadge, ClosingSoonBadge, SampleDataBadge, CategoryBadge, TownBadge } from './Badges';
+import { FreeBadge, PaidBadge, ClosingSoonBadge, SampleDataBadge, CategoryBadge, LocationBadge } from './Badges';
 import { Calendar, Building2, ArrowRight, Image as ImageIcon } from 'lucide-react';
 
 interface OpportunityCardProps {
@@ -54,7 +54,7 @@ export const OpportunityCard: React.FC<OpportunityCardProps> = ({ opportunity, o
           <div className="flex flex-wrap items-center gap-1.5 mb-2.5">
             {isFree ? <FreeBadge /> : <PaidBadge cost={opportunity.cost} />}
             <CategoryBadge category={opportunity.category} />
-            <TownBadge town={opportunity.town} />
+            <LocationBadge item={opportunity} />
             {isClosingSoon && <ClosingSoonBadge daysLeft={daysLeft} />}
             {opportunity.isSample && <SampleDataBadge />}
           </div>

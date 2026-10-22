@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useLanguage } from '../context/LanguageContext';
 import { Share2, Check } from 'lucide-react';
 
 interface ShareButtonProps {
@@ -14,6 +15,7 @@ export const ShareButton: React.FC<ShareButtonProps> = ({
   url = window.location.href,
   className = '',
 }) => {
+  const { t } = useLanguage();
   const [copied, setCopied] = useState(false);
 
   const handleShare = async () => {
@@ -21,7 +23,7 @@ export const ShareButton: React.FC<ShareButtonProps> = ({
       try {
         await navigator.share({
           title,
-          text: `${text}\n\nDiscovered via Center for Centers (C4C Buea):`,
+          text: `${text}\n\n${t.shareDiscovered}`,
           url,
         });
         return;

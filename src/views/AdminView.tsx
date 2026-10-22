@@ -10,6 +10,8 @@ import {
   fetchReportsForAdmin,
 } from '../lib/firestoreService';
 import { StatusBadge, SampleDataBadge, FreeBadge, PaidBadge } from '../components/Badges';
+import { useLanguage } from '../context/LanguageContext';
+import { formatLocation } from '../lib/regions';
 import { ShieldCheck, Check, X, Database, AlertCircle, RefreshCw, EyeOff, FileText, Building2, Sparkles, MessageSquare } from 'lucide-react';
 
 interface AdminViewProps {
@@ -18,6 +20,7 @@ interface AdminViewProps {
 }
 
 export const AdminView: React.FC<AdminViewProps> = ({ user, onRefreshData }) => {
+  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState<'pending' | 'all-orgs' | 'all-opps' | 'reports'>('pending');
   const [loading, setLoading] = useState(true);
   const [loadingSample, setLoadingSample] = useState(false);
@@ -230,7 +233,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, onRefreshData }) => 
                         <div className="flex items-center gap-2 mb-1">
                           <StatusBadge status={org.status} />
                           <span className="text-xs font-bold text-[#16402E]">{org.type}</span>
-                          <span className="text-xs text-[#555E57]">• {org.town}</span>
+                          <span className="text-xs text-[#555E57]">• {formatLocation(org, t)}</span>
                         </div>
                         <h3 className="font-heading font-bold text-base text-[#1C211E]">{org.name}</h3>
                         <p className="text-xs text-[#555E57]">{org.address}</p>
@@ -410,7 +413,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, onRefreshData }) => 
                     <StatusBadge status={org.status} />
                     {org.isSample && <SampleDataBadge />}
                     <span className="text-xs font-bold text-[#16402E]">{org.type}</span>
-                    <span className="text-xs text-[#555E57]">• {org.town}</span>
+                    <span className="text-xs text-[#555E57]">• {formatLocation(org, t)}</span>
                   </div>
                   <h3 className="font-heading font-bold text-base text-[#1C211E]">{org.name}</h3>
                   <p className="text-xs text-[#555E57]">{org.address}</p>

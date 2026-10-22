@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { submitUserReport } from '../lib/firestoreService';
 import { sendToFormspree } from '../lib/formspree';
+import { useLanguage } from '../context/LanguageContext';
 import { AlertCircle, CheckCircle, X } from 'lucide-react';
 
 interface ReportModalProps {
@@ -18,6 +19,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
   targetId,
   targetTitle,
 }) => {
+  const { t } = useLanguage();
   const [reason, setReason] = useState('Outdated contact or hours');
   const [details, setDetails] = useState('');
   const [reporterEmail, setReporterEmail] = useState('');
@@ -109,7 +111,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
           <div className="py-6 text-center">
             <CheckCircle size={36} className="text-[#16402E] mx-auto mb-2" />
             <p className="font-bold text-[#16402E]">Thank you for verifying.</p>
-            <p className="text-xs text-[#555E57] mt-1">Our Buea admin team will review this notice promptly.</p>
+            <p className="text-xs text-[#555E57] mt-1">{t.reportTeamReview}</p>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-3.5">

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Organization } from '../types';
-import { SampleDataBadge, TownBadge } from './Badges';
+import { SampleDataBadge, LocationBadge } from './Badges';
 import { OrgLogo, OrgPicture } from './OrgVisuals';
 import { MapPin, Zap, Wifi, ArrowRight, ShieldCheck } from 'lucide-react';
 
@@ -29,7 +29,7 @@ export const OrganizationCard: React.FC<OrganizationCardProps> = ({
             <span className="text-[11px] font-bold px-2 py-0.5 rounded-sm bg-[#16402E] text-white border border-[#16402E]">
               {organization.type}
             </span>
-            <TownBadge town={organization.town} />
+            <LocationBadge item={organization} />
             {organization.isSample && <SampleDataBadge />}
           </div>
         </div>

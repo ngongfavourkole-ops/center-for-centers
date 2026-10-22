@@ -1,28 +1,32 @@
 import React, { useState, useMemo } from 'react';
-import { Opportunity } from '../types';
+import { Opportunity, NavFilters } from '../types';
 import { OpportunityCard } from '../components/OpportunityCard';
 import { Search, SlidersHorizontal, RotateCcw } from 'lucide-react';
+import { useLanguage } from '../context/LanguageContext';
+import { OPPORTUNITY_REGIONS, resolveRegion, normalizeText } from '../lib/regions';
+import { matchesQuery } from '../lib/search';
+import { translations } from '../lib/translations';
 
 interface OpportunitiesViewProps {
   opportunities: Opportunity[];
   onSelectOpportunity: (opp: Opportunity) => void;
-  initialFilters?: {
-    category?: string;
-    town?: string;
-    cost?: 'free' | 'paid';
-  };
+  initialFilters?: NavFilters;
+  onSearchPlaces?: (query: string) => void;
 }
 
 export const OpportunitiesView: React.FC<OpportunitiesViewProps> = ({
   opportunities,
   onSelectOpportunity,
   initialFilters,
+  onSearchPlaces,
 }) => {
-  const [searchQuery, setSearchQuery] = useState('');
+  const { t } = useLanguage();
+  const [searchQuery, setSearchQuery] = useState(initialFilters?.query || '');
   const [selectedCategory, setSelectedCategory] = useState<string>(initialFilters?.category || 'All');
   const [selectedInterest, setSelectedInterest] = useState<string>('All');
   const [selectedEducation, setSelectedEducation] = useState<string>('All');
-  const [selectedTown, setSelectedTown] = useState<string>(initialFilters?.town || 'All');
+  const [selectedRegion, setSelectedRegion] = useState<string>(initialFilters?.region || 'All');
+  const [townFilter, setTownFilter] = useState('');
   const [costFilter, setCostFilter] = useState<'all' | 'free' | 'paid'>(initialFilters?.cost || 'all');
   const [showFiltersMobile, setShowFiltersMobile] = useState(false);
 
@@ -32,7 +36,6 @@ export const OpportunitiesView: React.FC<OpportunitiesViewProps> = ({
   const categories = ['All', 'Training', 'Workshop', 'Event', 'Internship', 'Scholarship', 'Hackathon', 'Other'];
   const interestsList = ['All', 'Technology', 'Engineering', 'Business', 'Health', 'Arts', 'Agriculture', 'Education', 'Leadership'];
   const educationList = ['All', 'Secondary school', 'High school', 'University', 'Graduate or young professional', 'Any'];
-  const townsList = ['All', 'Buea', 'Limbe', 'Tiko', 'Kumba', 'Online', 'Other'];
 
   const filteredOpportunities = useMemo(() => {
     return opportunities.filter(opp => {
@@ -40,16 +43,25 @@ export const OpportunitiesView: React.FC<OpportunitiesViewProps> = ({
         return false;
       }
 
+      const region = resolveRegion(opp);
+
       if (searchQuery.trim()) {
-        const query = searchQuery.toLowerCase();
-        const matchesTitle = opp.title.toLowerCase().includes(query);
-        const matchesDesc = opp.description.toLowerCase().includes(query);
-        const matchesOrg = opp.orgName?.toLowerCase().includes(query);
-        const matchesTown = opp.town.toLowerCase().includes(query);
-        const matchesInterests = opp.interests?.some(i => i.toLowerCase().includes(query));
-        if (!matchesTitle && !matchesDesc && !matchesOrg && !matchesTown && !matchesInterests) {
-          return false;
-        }
+        // Region names in both languages so "Sud-Ouest" and "Southwest" both match
+        const regionWords = region && region !== 'Online'
+          ? [region, translations.fr.regionNames[region]]
+          : region === 'Online' ? [translations.en.online, translations.fr.online] : [];
+        const matches = matchesQuery(searchQuery, [
+          opp.title,
+          opp.description,
+          opp.orgName,
+          opp.town,
+          opp.category,
+          opp.eligibility,
+          opp.costNote,
+          ...(opp.interests || []),
+          ...regionWords,
+        ]);
+        if (!matches) return false;
       }
 
       if (selectedCategory !== 'All' && opp.category !== selectedCategory) {
@@ -65,7 +77,11 @@ export const OpportunitiesView: React.FC<OpportunitiesViewProps> = ({
         if (!matchesEd) return false;
       }
 
-      if (selectedTown !== 'All' && opp.town !== selectedTown) {
+      if (selectedRegion !== 'All' && region !== selectedRegion) {
+        return false;
+      }
+
+      if (townFilter.trim() && !normalizeText(opp.town).includes(normalizeText(townFilter))) {
         return false;
       }
 
@@ -78,14 +94,15 @@ export const OpportunitiesView: React.FC<OpportunitiesViewProps> = ({
 
       return true;
     });
-  }, [opportunities, searchQuery, selectedCategory, selectedInterest, selectedEducation, selectedTown, costFilter, todayStr]);
+  }, [opportunities, searchQuery, selectedCategory, selectedInterest, selectedEducation, selectedRegion, townFilter, costFilter, todayStr]);
 
   const hasActiveFilters =
     searchQuery !== '' ||
     selectedCategory !== 'All' ||
     selectedInterest !== 'All' ||
     selectedEducation !== 'All' ||
-    selectedTown !== 'All' ||
+    selectedRegion !== 'All' ||
+    townFilter !== '' ||
     costFilter !== 'all';
 
   const resetFilters = () => {
@@ -93,7 +110,8 @@ export const OpportunitiesView: React.FC<OpportunitiesViewProps> = ({
     setSelectedCategory('All');
     setSelectedInterest('All');
     setSelectedEducation('All');
-    setSelectedTown('All');
+    setSelectedRegion('All');
+    setTownFilter('');
     setCostFilter('all');
   };
 
@@ -113,7 +131,9 @@ export const OpportunitiesView: React.FC<OpportunitiesViewProps> = ({
           <div className="relative flex-1">
             <Search size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#555E57]" />
             <input
-              type="text"
+              type="search"
+              enterKeyHint="search"
+              aria-label={t.searchButton}
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               placeholder="Search by keywords, skills, or organization name..."
@@ -131,7 +151,7 @@ export const OpportunitiesView: React.FC<OpportunitiesViewProps> = ({
         </div>
 
         <div className={`${showFiltersMobile ? 'block' : 'hidden'} sm:block bg-white border border-[#E2DDD5] p-4 rounded-sm space-y-3`}>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 text-xs">
+          <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-6 gap-3 text-xs">
             <div>
               <label className="block font-bold text-[#1C211E] mb-1 uppercase tracking-wider text-[11px]">Category</label>
               <select
@@ -172,16 +192,30 @@ export const OpportunitiesView: React.FC<OpportunitiesViewProps> = ({
             </div>
 
             <div>
-              <label className="block font-bold text-[#1C211E] mb-1 uppercase tracking-wider text-[11px]">Town / Location</label>
+              <label htmlFor="opp-region" className="block font-bold text-[#1C211E] mb-1 uppercase tracking-wider text-[11px]">{t.regionField}</label>
               <select
-                value={selectedTown}
-                onChange={e => setSelectedTown(e.target.value)}
+                id="opp-region"
+                value={selectedRegion}
+                onChange={e => setSelectedRegion(e.target.value)}
                 className="w-full bg-[#F8F5EE] border border-[#E2DDD5] rounded-sm px-2.5 py-1.5 text-xs text-[#1C211E] focus:outline-none focus:border-[#16402E]"
               >
-                {townsList.map(t => (
-                  <option key={t} value={t}>{t}</option>
+                <option value="All">{t.allRegions}</option>
+                {OPPORTUNITY_REGIONS.map(r => (
+                  <option key={r} value={r}>{r === 'Online' ? t.online : t.regionNames[r]}</option>
                 ))}
               </select>
+            </div>
+
+            <div>
+              <label htmlFor="opp-town" className="block font-bold text-[#1C211E] mb-1 uppercase tracking-wider text-[11px]">{t.townField}</label>
+              <input
+                id="opp-town"
+                type="text"
+                value={townFilter}
+                onChange={e => setTownFilter(e.target.value)}
+                placeholder={t.townFilterPlaceholder}
+                className="w-full bg-[#F8F5EE] border border-[#E2DDD5] rounded-sm px-2.5 py-1.5 text-xs text-[#1C211E] focus:outline-none focus:border-[#16402E]"
+              />
             </div>
 
             <div>
@@ -239,14 +273,24 @@ export const OpportunitiesView: React.FC<OpportunitiesViewProps> = ({
             <p className="text-xs text-[#555E57] max-w-sm mx-auto mb-4">
               Try adjusting your filters, selecting a different town, or resetting the search query.
             </p>
-            {hasActiveFilters && (
-              <button
-                onClick={resetFilters}
-                className="px-4 py-2 bg-[#16402E] text-white text-xs font-bold rounded-sm border border-[#0F2D20]"
-              >
-                Clear all filters
-              </button>
-            )}
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-2">
+              {hasActiveFilters && (
+                <button
+                  onClick={resetFilters}
+                  className="px-4 py-2 bg-[#16402E] text-white text-xs font-bold rounded-sm border border-[#0F2D20]"
+                >
+                  Clear all filters
+                </button>
+              )}
+              {searchQuery.trim() && onSearchPlaces && (
+                <button
+                  onClick={() => onSearchPlaces(searchQuery.trim())}
+                  className="px-4 py-2 bg-white text-[#16402E] text-xs font-bold rounded-sm border border-[#16402E] break-words max-w-full"
+                >
+                  {t.searchPlacesInstead.replace('{query}', searchQuery.trim())}
+                </button>
+              )}
+            </div>
           </div>
         )}
       </div>
