@@ -142,6 +142,9 @@ export const translations = {
 
     // Admin places and claims
     adminAddPlace: 'Add place',
+    importStarter: 'Add {count} starter places',
+    importStarterDesc: 'Real places confirmed from public sources (universities, libraries, hubs) across all 10 regions. Unconfirmed details stay Unknown.',
+    importStarterDone: 'Added {count} starter places.',
     adminAddPlaceTitle: 'Add a place managed by the team',
     adminAddPlaceDesc: 'Places added here are published immediately and labelled as managed by the team until the real owner claims them.',
     adminEditPlaceTitle: 'Edit place',
@@ -623,6 +626,9 @@ export const translations = {
 
     // Admin places and claims
     adminAddPlace: 'Ajouter un lieu',
+    importStarter: 'Ajouter {count} lieux de départ',
+    importStarterDesc: 'Des lieux réels confirmés par des sources publiques (universités, bibliothèques, hubs) dans les 10 régions. Les détails non confirmés restent « Inconnu ».',
+    importStarterDone: '{count} lieux de départ ajoutés.',
     adminAddPlaceTitle: 'Ajouter un lieu géré par l’équipe',
     adminAddPlaceDesc: 'Les lieux ajoutés ici sont publiés immédiatement et indiqués comme gérés par l’équipe jusqu’à ce que le vrai responsable les revendique.',
     adminEditPlaceTitle: 'Modifier le lieu',

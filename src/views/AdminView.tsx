@@ -10,6 +10,7 @@ import {
   approveClaim,
   rejectClaim,
   adminDeletePlace,
+  adminCreatePlace,
   fetchPendingPlaceEditsForAdmin,
   approvePlaceEdit,
   rejectPlaceEdit,
@@ -19,7 +20,8 @@ import {
 } from '../lib/firestoreService';
 import { StatusBadge, SampleDataBadge, FreeBadge, PaidBadge, TeamManagedBadge } from '../components/Badges';
 import { AdminPlaceEditor } from '../components/AdminPlaceEditor';
-import { placeTypeLabel, isTeamManaged } from '../lib/places';
+import { STARTER_PLACES } from '../data/starterPlaces';
+import { placeTypeLabel, isTeamManaged, placeFieldsFromDraft, emptyPlaceDraft } from '../lib/places';
 import { useLanguage } from '../context/LanguageContext';
 import { formatLocation } from '../lib/regions';
 import { ShieldCheck, Check, X, AlertCircle, RefreshCw, EyeOff, FileText, Building2, Sparkles, MessageSquare, Plus, Edit3, Trash2, BadgeCheck } from 'lucide-react';
@@ -36,6 +38,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, onRefreshData }) => 
   const [claims, setClaims] = useState<Claim[]>([]);
   const [placeEdits, setPlaceEdits] = useState<PlaceEdit[]>([]);
   const [users, setUsers] = useState<UserProfile[]>([]);
+  const [importingStarter, setImportingStarter] = useState(false);
   const [loading, setLoading] = useState(true);
   const [statusActionLoading, setStatusActionLoading] = useState<string | null>(null);
   const [notice, setNotice] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
@@ -101,6 +104,29 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, onRefreshData }) => 
       setNotice({ type: 'error', msg: 'Failed to update opportunity status.' });
     } finally {
       setStatusActionLoading(null);
+    }
+  };
+
+  // Real starter places not yet in the database (matched by name, so importing twice adds nothing)
+  const existingNames = new Set(allOrgs.map(o => o.name.trim().toLowerCase()));
+  const starterToImport = STARTER_PLACES.filter(p => !existingNames.has(p.name.trim().toLowerCase()));
+
+  const handleImportStarter = async () => {
+    setImportingStarter(true);
+    let added = 0;
+    try {
+      for (const place of starterToImport) {
+        const fields = placeFieldsFromDraft({ ...emptyPlaceDraft(), ...place });
+        await adminCreatePlace(user.uid, fields, place.sourceNote);
+        added++;
+      }
+      setNotice({ type: 'success', msg: t.importStarterDone.replace('{count}', String(added)) });
+    } catch {
+      setNotice({ type: 'error', msg: `${t.placeSaveError} (${added})` });
+    } finally {
+      setImportingStarter(false);
+      await loadAdminData();
+      await onRefreshData();
     }
   };
 
@@ -574,12 +600,26 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, onRefreshData }) => 
           </section>
         </div>
       ) : activeTab === 'add-place' ? (
-        <AdminPlaceEditor
-          key="new-place"
-          user={user}
-          existing={null}
-          onSaved={handlePlaceSaved}
-        />
+        <div className="space-y-4">
+          {starterToImport.length > 0 && (
+            <div className="bg-white border-2 border-[#D95D39]/40 rounded-sm p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <p className="text-xs text-[#445048]">{t.importStarterDesc}</p>
+              <button
+                onClick={handleImportStarter}
+                disabled={importingStarter}
+                className="shrink-0 px-4 py-2 bg-[#D95D39] hover:bg-[#B84725] text-white text-xs font-bold rounded-sm border border-[#B84725] disabled:opacity-60"
+              >
+                {importingStarter ? t.saving : t.importStarter.replace('{count}', String(starterToImport.length))}
+              </button>
+            </div>
+          )}
+          <AdminPlaceEditor
+            key="new-place"
+            user={user}
+            existing={null}
+            onSaved={handlePlaceSaved}
+          />
+        </div>
       ) : activeTab === 'claims' ? (
         <div className="space-y-3">
           {claims.length > 0 ? (
