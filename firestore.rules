@@ -240,6 +240,23 @@ service cloud.firestore {
       allow delete: if isAdmin() || (isSignedIn() && resource.data.orgId == request.auth.uid);
     }
 
+    // ---------- Venue requests ----------
+    // Organizations ask the team to arrange an approved place. Only admins can read them.
+    match /venueRequests/{requestId} {
+      allow create: if (isOrgAccount() || isAdmin()) &&
+        request.resource.data.keys().hasOnly(['placeId', 'placeName', 'requesterUid', 'requesterEmail', 'contact', 'message',
+                                              'needs', 'region', 'date', 'budget', 'status', 'createdAt']) &&
+        request.resource.data.requesterUid == request.auth.uid &&
+        request.resource.data.status == 'new' &&
+        request.resource.data.placeId is string &&
+        request.resource.data.message is string && request.resource.data.message.size() > 0 && request.resource.data.message.size() <= 2000 &&
+        request.resource.data.contact is string && request.resource.data.contact.size() > 0 && request.resource.data.contact.size() <= 200 &&
+        request.resource.data.needs is list && request.resource.data.needs.size() <= 10 &&
+        (request.resource.data.budget == null || request.resource.data.budget is number) &&
+        get(/databases/$(database)/documents/organizations/$(request.resource.data.placeId)).data.status == 'approved';
+      allow read, update, delete: if isAdmin();
+    }
+
     // ---------- Reports ----------
     // Anyone, signed in or not, can report wrong information. Only admins can read them.
     match /reports/{reportId} {

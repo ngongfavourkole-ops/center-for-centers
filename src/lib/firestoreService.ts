@@ -505,3 +505,29 @@ export async function rejectPlaceEdit(orgId: string): Promise<void> {
     handleFirestoreError(error, OperationType.UPDATE, `${PLACE_EDITS_COLLECTION}/${orgId}`);
   }
 }
+
+export interface VenueRequest {
+  placeId: string;
+  placeName: string;
+  requesterUid: string;
+  requesterEmail: string;
+  contact: string;
+  message: string;
+  needs: string[];
+  region: string;
+  date: string;
+  budget: number | null;
+}
+
+// Organization asks the team to arrange a place; admins follow up (also emailed via Formspree).
+export async function submitVenueRequest(request: VenueRequest): Promise<void> {
+  try {
+    await addDoc(collection(db, 'venueRequests'), {
+      ...request,
+      status: 'new',
+      createdAt: new Date().toISOString(),
+    });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.CREATE, 'venueRequests');
+  }
+}

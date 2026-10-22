@@ -15,6 +15,7 @@ import { OrganizationProfileView } from './views/OrganizationProfileView';
 import { OrganizationDashboardView } from './views/OrganizationDashboardView';
 import { StudentDashboardView } from './views/StudentDashboardView';
 import { AdminView } from './views/AdminView';
+import { MatchView } from './views/MatchView';
 import {
   Compass,
   Sparkles,
@@ -26,9 +27,10 @@ import {
   Home,
   WifiOff,
   Lock,
+  Search,
 } from 'lucide-react';
 
-type ActiveTab = 'home' | 'opportunities' | 'organizations' | 'dashboard';
+type ActiveTab = 'home' | 'opportunities' | 'organizations' | 'match' | 'dashboard';
 type ProfileStatus = 'idle' | 'loading' | 'ready' | 'missing' | 'error';
 
 // Offline cache of approved listings. Storage can be unavailable (private mode), so failures are ignored.
@@ -316,6 +318,14 @@ export default function App() {
               <span>{t.places}</span>
             </button>
 
+            <button
+              onClick={() => handleNavigateTab('match')}
+              className={desktopNavClass(activeTab === 'match' && onListPage)}
+            >
+              <Search size={14} aria-hidden="true" />
+              <span>{t.matchNav}</span>
+            </button>
+
             {user && (
               <button
                 onClick={() => handleNavigateTab('dashboard')}
@@ -409,6 +419,16 @@ export default function App() {
             onSelectOrganization={handleSelectOrganization}
             initialFilters={navFilters}
             onSearchOpportunities={(query) => handleNavigateTab('opportunities', { query })}
+          />
+        ) : activeTab === 'match' ? (
+          <MatchView
+            organizations={organizations}
+            opportunities={opportunities}
+            user={user}
+            role={role}
+            onSelectOrganization={handleSelectOrganization}
+            onSelectOpportunity={handleSelectOpportunity}
+            onBrowsePlaces={() => handleNavigateTab('organizations')}
           />
         ) : activeTab === 'dashboard' ? (
           renderDashboard()

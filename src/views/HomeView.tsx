@@ -21,7 +21,7 @@ interface HomeViewProps {
   organizations: Organization[];
   onSelectOpportunity: (opp: Opportunity) => void;
   onSelectOrganization: (org: Organization) => void;
-  onNavigateTab: (tab: 'opportunities' | 'organizations', filters?: NavFilters) => void;
+  onNavigateTab: (tab: 'opportunities' | 'organizations' | 'match', filters?: NavFilters) => void;
 }
 
 export const HomeView: React.FC<HomeViewProps> = ({
@@ -115,6 +115,14 @@ export const HomeView: React.FC<HomeViewProps> = ({
               <ArrowRight size={16} aria-hidden="true" />
             </button>
           </form>
+
+          <button
+            onClick={() => onNavigateTab('match')}
+            className="mt-3 inline-flex items-center gap-1.5 text-sm font-bold text-white underline underline-offset-4 decoration-[#D95D39] decoration-2 hover:text-[#FBECE7]"
+          >
+            <span>{t.matchHomeCta}</span>
+            <ArrowRight size={14} aria-hidden="true" />
+          </button>
 
           <div className="mt-4 flex flex-wrap items-center gap-1.5 text-xs">
             <span className="text-[#C4C0B6] font-medium text-[11px] mr-1">Quick filters:</span>
