@@ -9,11 +9,13 @@ import { GraduationCap, Building2, Check, ArrowRight, ShieldAlert } from 'lucide
 interface RoleSelectionModalProps {
   user: User;
   onRoleSelected: (profile: UserProfile) => void;
+  onSignOut: () => void;
 }
 
 export const RoleSelectionModal: React.FC<RoleSelectionModalProps> = ({
   user,
   onRoleSelected,
+  onSignOut,
 }) => {
   const { t, language } = useLanguage();
   const [selectedRole, setSelectedRole] = useState<UserRole>('student');
@@ -57,17 +59,17 @@ export const RoleSelectionModal: React.FC<RoleSelectionModalProps> = ({
       onRoleSelected(newProfile);
     } catch (err) {
       console.error('Failed to create user role:', err);
-      setError('Could not save your account selection. Please check your internet connection and try again.');
+      setError(t.accountLoadError);
       setSaving(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-      <div className="bg-white border-2 border-[#16402E] max-w-lg w-full rounded-sm shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#1C211E]/70" role="dialog" aria-modal="true" aria-labelledby="role-modal-title">
+      <div className="bg-white border-2 border-[#16402E] max-w-lg w-full max-h-[90vh] overflow-y-auto rounded-sm">
         {/* Header */}
         <div className="bg-[#16402E] text-[#F8F5EE] px-6 py-5 border-b-2 border-[#D95D39]">
-          <h2 className="text-xl font-heading font-black tracking-tight">
+          <h2 id="role-modal-title" className="text-xl font-heading font-black tracking-tight">
             {t.roleModalTitle}
           </h2>
           <p className="text-xs text-[#E2DDD5] mt-1 leading-relaxed">
@@ -99,11 +101,13 @@ export const RoleSelectionModal: React.FC<RoleSelectionModalProps> = ({
 
           <div className="space-y-3">
             {/* Student Card Option */}
-            <div
+            <button
+              type="button"
               onClick={() => setSelectedRole('student')}
-              className={`p-4 border-2 rounded-sm cursor-pointer transition-all flex items-start gap-4 ${
+              aria-pressed={selectedRole === 'student'}
+              className={`w-full text-left p-4 border-2 rounded-sm cursor-pointer transition-colors flex items-start gap-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D95D39] ${
                 selectedRole === 'student'
-                  ? 'border-[#16402E] bg-[#F4F8F5] shadow-xs'
+                  ? 'border-[#16402E] bg-[#F4F8F5] '
                   : 'border-[#E2DDD5] hover:border-[#16402E]/40 bg-white'
               }`}
             >
@@ -131,14 +135,16 @@ export const RoleSelectionModal: React.FC<RoleSelectionModalProps> = ({
                   {t.studentOptionDesc}
                 </p>
               </div>
-            </div>
+            </button>
 
             {/* Organization Card Option */}
-            <div
+            <button
+              type="button"
               onClick={() => setSelectedRole('organization')}
-              className={`p-4 border-2 rounded-sm cursor-pointer transition-all flex items-start gap-4 ${
+              aria-pressed={selectedRole === 'organization'}
+              className={`w-full text-left p-4 border-2 rounded-sm cursor-pointer transition-colors flex items-start gap-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D95D39] ${
                 selectedRole === 'organization'
-                  ? 'border-[#16402E] bg-[#F4F8F5] shadow-xs'
+                  ? 'border-[#16402E] bg-[#F4F8F5] '
                   : 'border-[#E2DDD5] hover:border-[#16402E]/40 bg-white'
               }`}
             >
@@ -166,7 +172,7 @@ export const RoleSelectionModal: React.FC<RoleSelectionModalProps> = ({
                   {t.orgOptionDesc}
                 </p>
               </div>
-            </div>
+            </button>
           </div>
 
           <div className="flex items-start gap-2 p-3 bg-[#FFF4DE] border border-[#F3D594] rounded-sm text-[#8C5800] text-xs">
@@ -181,6 +187,13 @@ export const RoleSelectionModal: React.FC<RoleSelectionModalProps> = ({
           >
             <span>{saving ? t.savingRole : t.confirmRoleButton}</span>
             <ArrowRight size={16} />
+          </button>
+          <button
+            type="button"
+            onClick={onSignOut}
+            className="w-full py-2 text-xs font-bold text-[#555E57] hover:text-[#A51D24]"
+          >
+            {t.signOut}
           </button>
         </form>
       </div>

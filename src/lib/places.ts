@@ -6,6 +6,7 @@ import {
   InternetReliability,
   SocialLinks,
   SocialNetwork,
+  PlaceEdit,
 } from '../types';
 import { translations } from './translations';
 import { resolveRegion, editableTown } from './regions';
@@ -172,6 +173,11 @@ export function placeDraftFromOrg(org: Organization): PlaceDraft {
     bookingRequired: org.bookingRequired ?? null,
     sourceNote: org.sourceNote || '',
   };
+}
+
+// Draft values from an owner's pending edit of a published place.
+export function draftFromEdit(edit: PlaceEdit): Partial<PlaceDraft> {
+  return placeDraftFromOrg({ ...(edit.changes as Partial<Organization>) } as Organization);
 }
 
 // Trimmed fields ready to store on an Organization document.

@@ -2,18 +2,92 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // ---------- Helpers ----------
+
     function isSignedIn() {
       return request.auth != null;
     }
 
+    // Admin access comes only from this email list (keep in sync with src/lib/auth.ts).
+    // Nothing a user writes to the database can make them an admin.
     function isAdmin() {
-      return isSignedIn() && (
-        (request.auth.token.email != null && (
-          request.auth.token.email.lower() == 'ngongfavourkole@gmail.com' ||
-          request.auth.token.email.lower() == 'admin@centerforcenters.cm'
-        )) ||
-        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
-      );
+      return isSignedIn() &&
+        request.auth.token.email_verified == true &&
+        request.auth.token.email.lower() in [
+          'ngongfavourkole@gmail.com',
+          'admin@centerforcenters.cm'
+        ];
+    }
+
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    // Signed-in account that chose the organization role on first sign-in
+    function isOrgAccount() {
+      return isSignedIn() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        userDoc().data.role == 'organization';
+    }
+
+    function optionalString(d, field, maxLen) {
+      return !(field in d) || (d[field] is string && d[field].size() <= maxLen);
+    }
+
+    function regions() {
+      return ['Adamawa', 'Centre', 'East', 'Far North', 'Littoral', 'North', 'Northwest', 'South', 'Southwest', 'West'];
+    }
+
+    function placeTypes() {
+      return ['Learning center', 'Cyber cafe', 'Computer lab', 'Study space', 'Internet access point',
+              'Charging point', 'Club', 'Affordable store', 'Technology hub', 'NGO', 'Training provider',
+              'Educational institution', 'Other'];
+    }
+
+    // Editable fields of a place (what the place form saves)
+    function placeFieldKeys() {
+      return ['name', 'type', 'region', 'town', 'address', 'contactPhone', 'contactEmail', 'website',
+              'socialLinks', 'logoUrl', 'imageUrl', 'description', 'facilities', 'studentAccess', 'fees',
+              'openingHours', 'powerReliability', 'internetReliability', 'bookingRequired', 'lastConfirmed'];
+    }
+
+    function validPlace(d) {
+      return d.name is string && d.name.size() > 0 && d.name.size() <= 120 &&
+        d.type in placeTypes() &&
+        d.region in regions() &&
+        optionalString(d, 'town', 80) &&
+        optionalString(d, 'address', 300) &&
+        optionalString(d, 'contactPhone', 40) &&
+        optionalString(d, 'contactEmail', 120) &&
+        optionalString(d, 'website', 300) &&
+        optionalString(d, 'logoUrl', 500) &&
+        optionalString(d, 'imageUrl', 500) &&
+        optionalString(d, 'description', 3000) &&
+        optionalString(d, 'studentAccess', 1000) &&
+        optionalString(d, 'fees', 500) &&
+        optionalString(d, 'openingHours', 300) &&
+        optionalString(d, 'lastConfirmed', 30) &&
+        (!('socialLinks' in d) || (d.socialLinks is map && d.socialLinks.size() <= 6)) &&
+        (!('facilities' in d) || (d.facilities is list && d.facilities.size() <= 30)) &&
+        d.get('powerReliability', 'Unknown') in ['Backup power available', 'Grid power only', 'Unreliable power', 'Unknown'] &&
+        d.get('internetReliability', 'Unknown') in ['Stable', 'Limited', 'None', 'Unknown'] &&
+        (d.get('bookingRequired', null) == null || d.bookingRequired is bool);
+    }
+
+    function validOpportunity(d) {
+      return d.title is string && d.title.size() > 0 && d.title.size() <= 150 &&
+        d.category in ['Training', 'Workshop', 'Event', 'Internship', 'Scholarship', 'Hackathon', 'Other'] &&
+        (!('region' in d) || d.region in regions() || d.region == 'Online') &&
+        optionalString(d, 'description', 3000) &&
+        optionalString(d, 'town', 80) &&
+        optionalString(d, 'orgName', 120) &&
+        optionalString(d, 'costNote', 300) &&
+        optionalString(d, 'eligibility', 1000) &&
+        optionalString(d, 'registrationLink', 500) &&
+        optionalString(d, 'flyerUrl', 500) &&
+        optionalString(d, 'imageUrl', 500) &&
+        d.deadline is string && d.deadline.size() <= 30 &&
+        d.cost is number && d.cost >= 0;
     }
 
     // Default deny
@@ -21,110 +95,164 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
-    // Admins collection
-    match /admins/{adminId} {
-      allow read: if isAdmin();
-      allow write: if isAdmin();
+    // ---------- Users and roles ----------
+    // Each user chooses student or organization once. Nobody can give themselves a role
+    // other than those two, change their own role afterwards, or become admin this way.
+    match /users/{uid} {
+      allow get: if isSignedIn() && (request.auth.uid == uid || isAdmin());
+      allow list: if isAdmin();
+
+      allow create: if isSignedIn() &&
+        request.auth.uid == uid &&
+        request.resource.data.keys().hasOnly(['role', 'displayName', 'email', 'preferredLanguage', 'createdAt',
+                                              'region', 'town', 'educationLevel', 'interests']) &&
+        request.resource.data.role in ['student', 'organization'] &&
+        optionalString(request.resource.data, 'displayName', 120) &&
+        optionalString(request.resource.data, 'email', 200) &&
+        optionalString(request.resource.data, 'region', 40) &&
+        optionalString(request.resource.data, 'town', 80);
+
+      // Users may edit their own preferences but never their role
+      allow update: if (
+        isSignedIn() && request.auth.uid == uid &&
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['displayName', 'preferredLanguage', 'region', 'town', 'educationLevel', 'interests', 'updatedAt']) &&
+        optionalString(request.resource.data, 'region', 40) &&
+        optionalString(request.resource.data, 'town', 80)
+      ) || (
+        // Admins can switch someone between student and organization, nothing else
+        isAdmin() &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['role', 'updatedAt']) &&
+        request.resource.data.role in ['student', 'organization']
+      );
+
+      allow delete: if isAdmin();
     }
 
-    // Organizations collection
-    // Document ID is the owner's UID
-    // Owners self-registered at /organizations/{uid}. Team-managed places (added by admins)
-    // have a random id and an empty ownerUid until an admin approves a claim and sets ownerUid.
+    // ---------- Places ----------
+    // Owners self-register at /organizations/{uid}. Team-managed places (added by admins) have a
+    // random id and an empty ownerUid until an admin approves a claim and sets ownerUid.
     match /organizations/{orgId} {
       function isOwner() {
         return isSignedIn() && resource.data.ownerUid == request.auth.uid;
       }
 
-      // Anyone can read approved places; owners and admins can also read unpublished ones
-      allow get: if resource.data.status == 'approved' || isOwner() || isAdmin();
+      // Anyone can read approved places; owners and admins can also read unpublished ones.
+      // An owner may look up /organizations/{their uid} before it exists.
+      allow get: if (resource == null && isSignedIn() && request.auth.uid == orgId) ||
+        resource.data.status == 'approved' || isOwner() || isAdmin();
       allow list: if resource.data.status == 'approved' || isOwner() || isAdmin();
 
-      // Create: owners create their own doc with status 'pending'; admins can create anything
-      // (including approved team-managed places)
+      // Organization accounts create their own place, which waits for review
       allow create: if (
-        isAdmin() || (
-          isSignedIn() &&
-          request.auth.uid == orgId &&
-          request.resource.data.ownerUid == request.auth.uid &&
-          request.resource.data.status == 'pending' &&
-          request.resource.data.isSample == false &&
-          request.resource.data.get('managedBy', 'owner') == 'owner'
-        )
+        isAdmin() && validPlace(request.resource.data)
+      ) || (
+        isOrgAccount() &&
+        request.auth.uid == orgId &&
+        validPlace(request.resource.data) &&
+        request.resource.data.ownerUid == request.auth.uid &&
+        request.resource.data.status == 'pending' &&
+        request.resource.data.isSample == false &&
+        request.resource.data.get('managedBy', 'owner') == 'owner'
       );
 
-      // Update: owners edit their place but it goes back to 'pending' and they cannot hand it
-      // to someone else or mark it team-managed. Admins can update anything.
-      allow update: if (
-        isAdmin() || (
-          isOwner() &&
-          request.resource.data.ownerUid == request.auth.uid &&
-          request.resource.data.status == 'pending' &&
-          request.resource.data.isSample == resource.data.isSample &&
-          request.resource.data.get('managedBy', 'owner') == 'owner'
-        )
+      // Owners can edit a place that is not published yet (it stays pending). Edits to a published
+      // place go to /placeEdits instead so the live version stays public until an admin approves.
+      allow update: if isAdmin() || (
+        isOrgAccount() &&
+        isOwner() &&
+        resource.data.status != 'approved' &&
+        validPlace(request.resource.data) &&
+        request.resource.data.ownerUid == request.auth.uid &&
+        request.resource.data.status == 'pending' &&
+        request.resource.data.isSample == resource.data.isSample &&
+        request.resource.data.get('managedBy', 'owner') == 'owner'
       );
 
-      // Delete: admins, or the owner of a self-registered profile
+      // Admins, or the owner of a self-registered profile
       allow delete: if isAdmin() || (isOwner() && request.auth.uid == orgId);
+    }
+
+    // Owner changes to a published place, waiting for admin review. Document id = place id.
+    match /placeEdits/{orgId} {
+      allow get: if isAdmin() ||
+        (isSignedIn() && (resource == null || resource.data.ownerUid == request.auth.uid));
+      allow list: if isAdmin();
+
+      allow create, update: if isAdmin() || (
+        isOrgAccount() &&
+        get(/databases/$(database)/documents/organizations/$(orgId)).data.ownerUid == request.auth.uid &&
+        request.resource.data.keys().hasOnly(['orgId', 'orgName', 'ownerUid', 'changes', 'status', 'submittedAt']) &&
+        request.resource.data.orgId == orgId &&
+        request.resource.data.ownerUid == request.auth.uid &&
+        request.resource.data.status == 'pending' &&
+        request.resource.data.changes.keys().hasOnly(placeFieldKeys()) &&
+        validPlace(request.resource.data.changes)
+      );
+
+      allow delete: if isAdmin();
     }
 
     // Claims on team-managed places. Only admins can approve (which sets the place's ownerUid).
     match /claims/{claimId} {
       allow create: if isSignedIn() &&
+        request.resource.data.keys().hasOnly(['orgId', 'orgName', 'claimantUid', 'claimantEmail', 'claimantName',
+                                              'relationship', 'phone', 'verificationDetails', 'status', 'createdAt']) &&
         request.resource.data.claimantUid == request.auth.uid &&
         request.resource.data.status == 'pending' &&
         request.resource.data.orgId is string &&
-        request.resource.data.relationship is string && request.resource.data.relationship.size() <= 200 &&
-        request.resource.data.phone is string && request.resource.data.phone.size() <= 40 &&
-        request.resource.data.verificationDetails is string && request.resource.data.verificationDetails.size() <= 2000 &&
+        optionalString(request.resource.data, 'orgName', 120) &&
+        optionalString(request.resource.data, 'claimantName', 120) &&
+        optionalString(request.resource.data, 'claimantEmail', 200) &&
+        request.resource.data.relationship is string && request.resource.data.relationship.size() > 0 && request.resource.data.relationship.size() <= 200 &&
+        request.resource.data.phone is string && request.resource.data.phone.size() > 0 && request.resource.data.phone.size() <= 40 &&
+        request.resource.data.verificationDetails is string && request.resource.data.verificationDetails.size() > 0 && request.resource.data.verificationDetails.size() <= 2000 &&
         get(/databases/$(database)/documents/organizations/$(request.resource.data.orgId)).data.managedBy == 'team';
       allow read: if isAdmin() || (isSignedIn() && resource.data.claimantUid == request.auth.uid);
       allow update, delete: if isAdmin();
     }
 
-    // Opportunities collection
+    // ---------- Opportunities ----------
     match /opportunities/{opportunityId} {
-      // Public read for approved
-      // Admins can read any
-      // Owners can read their own opportunities
+      // Public read for approved; owners and admins can read their unpublished ones
       allow get: if resource.data.status == 'approved' || (isSignedIn() && (resource.data.orgId == request.auth.uid || isAdmin()));
       allow list: if resource.data.status == 'approved' || (isSignedIn() && (resource.data.orgId == request.auth.uid || isAdmin()));
 
-      // Create: Org owner can create opportunities for their org with status 'pending'
-      // Admins can create any (including sample or approved)
-      allow create: if (
-        isAdmin() || (
-          isSignedIn() &&
-          request.resource.data.orgId == request.auth.uid &&
-          request.resource.data.status == 'pending' &&
-          request.resource.data.isSample == false
-        )
+      // Organization accounts post opportunities that wait for review
+      allow create: if isAdmin() || (
+        isOrgAccount() &&
+        validOpportunity(request.resource.data) &&
+        request.resource.data.orgId == request.auth.uid &&
+        request.resource.data.status == 'pending' &&
+        request.resource.data.isSample == false
       );
 
-      // Update: Org owner can update their own opportunity, but status must be 'pending'
-      // Admins can update any field including approving/rejecting
-      allow update: if (
-        isAdmin() || (
-          isSignedIn() &&
-          resource.data.orgId == request.auth.uid &&
-          request.resource.data.orgId == request.auth.uid &&
-          request.resource.data.status == 'pending' &&
-          request.resource.data.isSample == resource.data.isSample
-        )
+      // Owners edit their own opportunity, which goes back to review
+      allow update: if isAdmin() || (
+        isOrgAccount() &&
+        resource.data.orgId == request.auth.uid &&
+        validOpportunity(request.resource.data) &&
+        request.resource.data.orgId == request.auth.uid &&
+        request.resource.data.status == 'pending' &&
+        request.resource.data.isSample == resource.data.isSample
       );
 
-      // Delete: Org owner or Admin
       allow delete: if isAdmin() || (isSignedIn() && resource.data.orgId == request.auth.uid);
     }
 
-    // Reports collection
+    // ---------- Reports ----------
+    // Anyone, signed in or not, can report wrong information. Only admins can read them.
     match /reports/{reportId} {
-      // Anyone can create a report
-      allow create: if request.resource.data.targetId is string &&
-                       request.resource.data.reason is string &&
-                       request.resource.data.details is string;
-      // Only admins can read, update, or delete reports
+      allow create: if
+        request.resource.data.keys().hasOnly(['targetType', 'targetId', 'targetTitle', 'reason', 'details',
+                                              'reporterEmail', 'status', 'createdAt']) &&
+        request.resource.data.targetType in ['organization', 'opportunity'] &&
+        request.resource.data.targetId is string && request.resource.data.targetId.size() <= 128 &&
+        optionalString(request.resource.data, 'targetTitle', 200) &&
+        request.resource.data.reason is string && request.resource.data.reason.size() <= 200 &&
+        request.resource.data.details is string && request.resource.data.details.size() > 0 && request.resource.data.details.size() <= 2000 &&
+        optionalString(request.resource.data, 'reporterEmail', 200) &&
+        request.resource.data.status == 'new';
       allow read, update, delete: if isAdmin();
     }
   }

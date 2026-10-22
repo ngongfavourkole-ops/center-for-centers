@@ -186,6 +186,33 @@ export const translations = {
     claimError: 'Could not send the claim. Please try again.',
     claimPending: 'Your claim for this place is waiting for review.',
 
+    // Accounts, roles and protected pages
+    signInToContinue: 'Sign in to see your dashboard',
+    signInToContinueDesc: 'Students can save places and opportunities. Organizations can manage their place and post opportunities.',
+    loadingAccount: 'Loading your account...',
+    accountLoadError: 'Could not load your account. Check your connection and try again.',
+    tryAgain: 'Try again',
+    signInShort: 'Sign in',
+    adminDashboard: 'Admin',
+    usersTab: 'Users',
+    noUsers: 'No registered users yet.',
+    roleUpdateError: 'Could not change the role. Please try again.',
+    roleNotChosen: 'No role chosen yet',
+
+    // Owner edits to a published place
+    editPendingNotice: 'Your latest changes are waiting for admin review. The current version stays public until they are approved.',
+    editRejectedNotice: 'Your last changes were not approved. Please check the details and send them again.',
+    editSubmitted: 'Changes sent for review. Your place stays public while the team checks them.',
+    profileSubmitted: 'Profile saved and sent to the team for review.',
+    placeEditsTitle: 'Changes to published places',
+    placeEditsEmpty: 'No changes waiting for review.',
+    approveChanges: 'Approve changes',
+    rejectChanges: 'Reject changes',
+    changesApproved: 'Changes approved and published.',
+    changesRejected: 'Changes rejected.',
+    changedFields: 'Changed fields',
+    noFieldChanges: 'No visible field changes.',
+
     // Empty states
     browseByType: 'Browse by type of place',
     noPlacesYet: 'No places listed yet',
@@ -203,14 +230,14 @@ export const translations = {
 
     // Role selection modal
     roleModalTitle: 'Welcome to Center for Centers',
-    roleModalSubtitle: 'Please choose your account type to personalize your experience. This choice cannot be changed later.',
+    roleModalSubtitle: 'Choose your account type so we can show you the right dashboard.',
     studentOptionTitle: "I'm a student or learner",
     studentOptionDesc: 'Find and save verified tech hubs, libraries, workshops, bootcamps, and career opportunities across Cameroon.',
     orgOptionTitle: 'I represent a place or organization',
     orgOptionDesc: 'Create and manage your verified center profile, post trainings, workshops, scholarships, and connect with youth.',
     confirmRoleButton: 'Continue to my dashboard',
     savingRole: 'Setting up your account...',
-    roleWarning: 'Note: Role cannot be modified after confirmation.',
+    roleWarning: 'You choose this once. Only an admin can change it later.',
 
     // Student dashboard
     studentDashboardTitle: 'Student Dashboard',
@@ -465,6 +492,33 @@ export const translations = {
     claimError: 'Impossible d’envoyer la revendication. Veuillez réessayer.',
     claimPending: 'Votre revendication pour ce lieu est en attente de validation.',
 
+    // Accounts, roles and protected pages
+    signInToContinue: 'Connectez-vous pour voir votre tableau de bord',
+    signInToContinueDesc: 'Les étudiants peuvent enregistrer des lieux et des opportunités. Les organisations peuvent gérer leur lieu et publier des opportunités.',
+    loadingAccount: 'Chargement de votre compte...',
+    accountLoadError: 'Impossible de charger votre compte. Vérifiez votre connexion et réessayez.',
+    tryAgain: 'Réessayer',
+    signInShort: 'Se connecter',
+    adminDashboard: 'Admin',
+    usersTab: 'Utilisateurs',
+    noUsers: 'Aucun utilisateur inscrit pour le moment.',
+    roleUpdateError: 'Impossible de modifier le rôle. Veuillez réessayer.',
+    roleNotChosen: 'Aucun rôle choisi',
+
+    // Owner edits to a published place
+    editPendingNotice: 'Vos dernières modifications attendent la validation d’un administrateur. La version actuelle reste publique jusqu’à leur approbation.',
+    editRejectedNotice: 'Vos dernières modifications n’ont pas été approuvées. Vérifiez les informations et envoyez-les à nouveau.',
+    editSubmitted: 'Modifications envoyées pour validation. Votre lieu reste public pendant que l’équipe les vérifie.',
+    profileSubmitted: 'Profil enregistré et envoyé à l’équipe pour validation.',
+    placeEditsTitle: 'Modifications de lieux publiés',
+    placeEditsEmpty: 'Aucune modification en attente.',
+    approveChanges: 'Approuver les modifications',
+    rejectChanges: 'Refuser les modifications',
+    changesApproved: 'Modifications approuvées et publiées.',
+    changesRejected: 'Modifications refusées.',
+    changedFields: 'Champs modifiés',
+    noFieldChanges: 'Aucun changement visible.',
+
     // Empty states
     browseByType: 'Parcourir par type de lieu',
     noPlacesYet: 'Aucun lieu pour le moment',
@@ -482,14 +536,14 @@ export const translations = {
 
     // Role selection modal
     roleModalTitle: 'Bienvenue sur Center for Centers',
-    roleModalSubtitle: 'Veuillez choisir votre type de compte pour personnaliser votre experience. Ce choix ne pourra pas etre modifie par la suite.',
+    roleModalSubtitle: 'Choisissez votre type de compte pour accéder au bon tableau de bord.',
     studentOptionTitle: 'Je suis un etudiant ou un apprenant',
     studentOptionDesc: 'Trouvez et enregistrez des poles technologiques, bibliotheques, ateliers et opportunites de carriere au Cameroun.',
     orgOptionTitle: 'Je represente un lieu ou une organisation',
     orgOptionDesc: 'Creez et gerez le profil de votre centre verifie, publiez des formations, bourses et connectez-vous avec les jeunes.',
     confirmRoleButton: 'Continuer vers mon tableau de bord',
     savingRole: 'Configuration de votre compte...',
-    roleWarning: 'Remarque: Le role ne peut pas etre modifie apres confirmation.',
+    roleWarning: 'Ce choix est fait une seule fois. Seul un administrateur peut le modifier ensuite.',
 
     // Student dashboard
     studentDashboardTitle: 'Tableau de bord etudiant',

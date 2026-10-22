@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { User } from 'firebase/auth';
-import { Organization, Opportunity, OpportunityRegion, OpportunityCategory, EducationLevel, UserRole } from '../types';
+import { Organization, Opportunity, OpportunityRegion, OpportunityCategory, EducationLevel, UserRole, PlaceEdit } from '../types';
 import { PlaceFormFields } from '../components/PlaceFormFields';
-import { PlaceDraft, emptyPlaceDraft, placeDraftFromOrg, placeFieldsFromDraft } from '../lib/places';
+import { PlaceDraft, emptyPlaceDraft, placeDraftFromOrg, placeFieldsFromDraft, draftFromEdit } from '../lib/places';
 import {
   fetchOrgByOwner,
+  fetchPlaceEdit,
+  submitPlaceEdit,
   saveOrganizationProfile,
   fetchOpportunitiesByOrg,
   saveOpportunity,
@@ -55,6 +57,7 @@ export const OrganizationDashboardView: React.FC<OrganizationDashboardProps> = (
   const [oppGotcha, setOppGotcha] = useState('');
 
   const [organization, setOrganization] = useState<Organization | null>(null);
+  const [placeEdit, setPlaceEdit] = useState<PlaceEdit | null>(null);
 
   const [draft, setDraft] = useState<PlaceDraft>(() => emptyPlaceDraft(user.email || ''));
 
@@ -107,7 +110,10 @@ export const OrganizationDashboardView: React.FC<OrganizationDashboardProps> = (
       const org = await fetchOrgByOwner(user.uid);
       if (org) {
         setOrganization(org);
-        const loaded = placeDraftFromOrg(org);
+        // Show the owner's pending changes (if any) rather than the live version
+        const edit = org.status === 'approved' ? await fetchPlaceEdit(org.id) : null;
+        setPlaceEdit(edit);
+        const loaded = edit?.status === 'pending' ? { ...placeDraftFromOrg(org), ...draftFromEdit(edit) } : placeDraftFromOrg(org);
         setDraft({ ...loaded, contactEmail: loaded.contactEmail || user.email || '' });
       }
 
@@ -158,13 +164,19 @@ export const OrganizationDashboardView: React.FC<OrganizationDashboardProps> = (
     setSaving(true);
     try {
       const fields = placeFieldsFromDraft(draft);
+      const isLiveEdit = organization?.status === 'approved';
 
       // 1. Save to Firestore first
-      await saveOrganizationProfile(user.uid, fields, organization);
+      // A published place stays public: its edit waits in placeEdits for admin review
+      if (isLiveEdit && organization) {
+        await submitPlaceEdit(organization, user.uid, fields);
+      } else {
+        await saveOrganizationProfile(user.uid, fields, organization);
+      }
 
       // 2. Send non-blocking copy to Formspree
       sendToFormspree('organization_profile', {
-        action: organization ? 'edit' : 'create',
+        action: isLiveEdit ? 'edit_of_published_place' : organization ? 'edit' : 'create',
         organizationId: organization?.id || user.uid,
         submitterEmail: user.email || fields.contactEmail,
         ...fields,
@@ -175,7 +187,7 @@ export const OrganizationDashboardView: React.FC<OrganizationDashboardProps> = (
         _gotcha: profileGotcha,
       }).catch(err => console.warn('Formspree org profile error:', err));
 
-      setSuccessMsg('Profile saved. Submitted to admin for review.');
+      setSuccessMsg(isLiveEdit ? t.editSubmitted : t.profileSubmitted);
       await loadData();
     } catch {
       setErrorMsg('Error saving organization profile.');
@@ -371,6 +383,20 @@ export const OrganizationDashboardView: React.FC<OrganizationDashboardProps> = (
         </div>
       )}
 
+      {placeEdit?.status === 'pending' && (
+        <div className="p-3 bg-[#FFF4DE] text-[#8C5800] text-xs font-medium rounded-sm border border-[#F3D594] flex items-center gap-2">
+          <Clock size={15} className="shrink-0" aria-hidden="true" />
+          <span>{t.editPendingNotice}</span>
+        </div>
+      )}
+
+      {placeEdit?.status === 'rejected' && (
+        <div className="p-3 bg-[#FCE8E6] text-[#A51D24] text-xs font-medium rounded-sm border border-[#F5C2C7] flex items-center gap-2">
+          <AlertCircle size={15} className="shrink-0" aria-hidden="true" />
+          <span>{t.editRejectedNotice}</span>
+        </div>
+      )}
+
       {successMsg && (
         <div className="p-3 bg-[#E8EFEA] text-[#16402E] text-xs font-medium rounded-sm border border-[#BACCC0] flex items-center gap-2">
           <CheckCircle2 size={15} className="shrink-0" />
@@ -389,7 +415,7 @@ export const OrganizationDashboardView: React.FC<OrganizationDashboardProps> = (
               Organization Details & Access Specifications
             </h2>
             <p className="text-xs text-[#555E57] mt-1">
-              Provide accurate practical facts so students know when and how they can use your space. Any edits will return your profile to pending review.
+              Provide accurate practical facts so students know when and how they can use your space.
             </p>
           </div>
 

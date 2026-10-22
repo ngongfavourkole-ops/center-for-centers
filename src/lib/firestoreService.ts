@@ -13,7 +13,7 @@ import {
   writeBatch,
 } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from './firebase';
-import { Organization, Opportunity, Report, ApprovalStatus, UserProfile, UserRole, Claim } from '../types';
+import { Organization, Opportunity, Report, ApprovalStatus, UserProfile, UserRole, Claim, PlaceEdit } from '../types';
 import { PlaceFields } from './places';
 
 const ORGS_COLLECTION = 'organizations';
@@ -21,6 +21,7 @@ const OPPS_COLLECTION = 'opportunities';
 const REPORTS_COLLECTION = 'reports';
 const USERS_COLLECTION = 'users';
 const CLAIMS_COLLECTION = 'claims';
+const PLACE_EDITS_COLLECTION = 'placeEdits';
 
 // Older demo records may still be in the database; they are never shown publicly.
 export async function fetchApprovedOrganizations(): Promise<Organization[]> {
@@ -297,11 +298,12 @@ export async function deleteOpportunity(opportunityId: string): Promise<void> {
 
 export async function submitUserReport(reportData: Omit<Report, 'id' | 'createdAt' | 'status'>): Promise<void> {
   try {
-    await addDoc(collection(db, REPORTS_COLLECTION), {
+    // Firestore rejects undefined values (e.g. an empty optional email)
+    await addDoc(collection(db, REPORTS_COLLECTION), removeUndefined({
       ...reportData,
       status: 'new',
       createdAt: new Date().toISOString(),
-    });
+    }));
   } catch (error) {
     handleFirestoreError(error, OperationType.CREATE, REPORTS_COLLECTION);
   }
@@ -440,5 +442,66 @@ export async function updateUserRoleByAdmin(uid: string, newRole: UserRole): Pro
   } catch (error) {
     handleFirestoreError(error, OperationType.UPDATE, `${USERS_COLLECTION}/${uid}`);
     throw error;
+  }
+}
+
+// Owner edits to a published place wait in /placeEdits/{orgId} so the live version stays public.
+export async function submitPlaceEdit(org: Organization, ownerUid: string, changes: PlaceFields): Promise<void> {
+  try {
+    await setDoc(doc(db, PLACE_EDITS_COLLECTION, org.id), {
+      orgId: org.id,
+      orgName: changes.name || org.name,
+      ownerUid,
+      changes: removeUndefined(changes),
+      status: 'pending',
+      submittedAt: new Date().toISOString(),
+    });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, `${PLACE_EDITS_COLLECTION}/${org.id}`);
+  }
+}
+
+export async function fetchPlaceEdit(orgId: string): Promise<PlaceEdit | null> {
+  try {
+    const snap = await getDoc(doc(db, PLACE_EDITS_COLLECTION, orgId));
+    return snap.exists() ? { id: snap.id, ...(snap.data() as Omit<PlaceEdit, 'id'>) } : null;
+  } catch (error) {
+    handleFirestoreError(error, OperationType.GET, `${PLACE_EDITS_COLLECTION}/${orgId}`);
+    return null;
+  }
+}
+
+export async function fetchPendingPlaceEditsForAdmin(): Promise<PlaceEdit[]> {
+  try {
+    const q = query(collection(db, PLACE_EDITS_COLLECTION), where('status', '==', 'pending'));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(d => ({ id: d.id, ...(d.data() as Omit<PlaceEdit, 'id'>) }));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.LIST, PLACE_EDITS_COLLECTION);
+    return [];
+  }
+}
+
+// Applies the owner's changes to the live place and closes the edit in one batch.
+export async function approvePlaceEdit(edit: PlaceEdit): Promise<void> {
+  const now = new Date().toISOString();
+  try {
+    const batch = writeBatch(db);
+    batch.update(doc(db, ORGS_COLLECTION, edit.orgId), { ...edit.changes, updatedAt: now });
+    batch.update(doc(db, PLACE_EDITS_COLLECTION, edit.orgId), { status: 'approved', reviewedAt: now });
+    await batch.commit();
+  } catch (error) {
+    handleFirestoreError(error, OperationType.UPDATE, `${PLACE_EDITS_COLLECTION}/${edit.orgId}`);
+  }
+}
+
+export async function rejectPlaceEdit(orgId: string): Promise<void> {
+  try {
+    await updateDoc(doc(db, PLACE_EDITS_COLLECTION, orgId), {
+      status: 'rejected',
+      reviewedAt: new Date().toISOString(),
+    });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.UPDATE, `${PLACE_EDITS_COLLECTION}/${orgId}`);
   }
 }

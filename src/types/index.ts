@@ -161,6 +161,19 @@ export interface UserProfile {
   updatedAt?: string;
 }
 
+// An owner's edit to an already published place, kept apart until an admin approves it,
+// so the live version stays public meanwhile. Document id = the place id.
+export interface PlaceEdit {
+  id?: string;
+  orgId: string;
+  orgName: string;
+  ownerUid: string;
+  changes: Record<string, unknown>;
+  status: 'pending' | 'approved' | 'rejected';
+  submittedAt: string;
+  reviewedAt?: string;
+}
+
 export interface Claim {
   id?: string;
   orgId: string;
