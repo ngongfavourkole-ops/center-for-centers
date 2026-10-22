@@ -6,13 +6,14 @@
       "type": "object",
       "properties": {
         "name": { "type": "string", "maxLength": 100 },
-        "type": { "type": "string", "maxLength": 50 },
+        "type": { "type": "string", "enum": ["Learning center", "Cyber cafe", "Computer lab", "Study space", "Internet access point", "Charging point", "Club", "Affordable store", "Technology hub", "NGO", "Training provider", "Educational institution", "Other"] },
         "region": { "type": "string", "enum": ["Adamawa", "Centre", "East", "Far North", "Littoral", "North", "Northwest", "South", "Southwest", "West"] },
         "town": { "type": "string", "maxLength": 80 },
         "address": { "type": "string", "maxLength": 200 },
         "contactPhone": { "type": "string", "maxLength": 30 },
         "contactEmail": { "type": "string", "maxLength": 100 },
         "website": { "type": "string", "maxLength": 200 },
+        "socialLinks": { "type": "object", "description": "facebook, instagram, tiktok, x, youtube, whatsapp: full link, username or phone" },
         "description": { "type": "string", "maxLength": 2000 },
         "facilities": { "type": "array", "description": "List of available facilities" },
         "studentAccess": { "type": "string", "maxLength": 1000 },
@@ -20,14 +21,18 @@
         "openingHours": { "type": "string", "maxLength": 200 },
         "powerReliability": { "type": "string", "enum": ["Backup power available", "Grid power only", "Unreliable power", "Unknown"] },
         "internetReliability": { "type": "string", "enum": ["Stable", "Limited", "None", "Unknown"] },
-        "bookingRequired": { "type": "boolean" },
+        "bookingRequired": { "type": ["boolean", "null"], "description": "null means unknown" },
         "lastConfirmed": { "type": "string", "maxLength": 50 },
         "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
         "isSample": { "type": "boolean" },
-        "ownerUid": { "type": "string", "maxLength": 128 },
+        "ownerUid": { "type": "string", "maxLength": 128, "description": "Empty for unclaimed team-managed places" },
+        "managedBy": { "type": "string", "enum": ["owner", "team"] },
+        "sourceNote": { "type": "string", "maxLength": 1000 },
+        "addedBy": { "type": "string", "maxLength": 128 },
+        "claimedAt": { "type": "string", "maxLength": 50 },
         "createdAt": { "type": "string", "maxLength": 50 }
       },
-      "required": ["name", "type", "town", "ownerUid", "status"]
+      "required": ["name", "type", "region", "ownerUid", "status"]
     },
     "Opportunity": {
       "title": "Opportunity",
@@ -84,6 +89,9 @@
     "/reports/{reportId}": {
       "schema": "Report",
       "description": "Issue reports submitted by users"
+    },
+    "/claims/{claimId}": {
+      "description": "Requests to take over a team-managed place: orgId, orgName, claimantUid, claimantEmail, claimantName, relationship, phone, verificationDetails, status (pending, approved, rejected), createdAt, reviewedAt"
     },
     "/admins/{adminUid}": {
       "schema": { "$ref": "#/entities/Organization" },

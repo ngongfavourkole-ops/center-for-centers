@@ -3,7 +3,6 @@ import { User, signInWithPopup, signOut, onAuthStateChanged } from 'firebase/aut
 import { auth, googleProvider, testFirestoreConnection } from './lib/firebase';
 import { isUserAdmin } from './lib/auth';
 import { fetchApprovedOrganizations, fetchApprovedOpportunities } from './lib/firestoreService';
-import { SAMPLE_ORGANIZATIONS, SAMPLE_OPPORTUNITIES } from './data/sampleData';
 import { Organization, Opportunity, NavFilters } from './types';
 import { useLanguage } from './context/LanguageContext';
 import { Logo } from './components/Logo';
@@ -27,6 +26,24 @@ import {
 } from 'lucide-react';
 
 type ActiveTab = 'home' | 'opportunities' | 'organizations' | 'dashboard' | 'admin';
+
+// Offline cache of approved listings. Storage can be unavailable (private mode), so failures are ignored.
+function writeCache(key: string, items: unknown[]) {
+  try {
+    localStorage.setItem(key, JSON.stringify(items));
+  } catch {
+    // Ignore: the cache is only a convenience
+  }
+}
+
+function readCache<T extends { isSample?: boolean }>(key: string): T[] {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(key) || '[]');
+    return Array.isArray(parsed) ? parsed.filter((item: T) => !item.isSample) : [];
+  } catch {
+    return [];
+  }
+}
 
 export default function App() {
   const { t } = useLanguage();
@@ -68,7 +85,7 @@ export default function App() {
     };
   }, []);
 
-  // Fetch approved data (with fallback to built-in sample data and localStorage cache)
+  // Fetch approved data, falling back to the last cached copy when offline
   const loadContent = async () => {
     setDataLoading(true);
     try {
@@ -76,52 +93,13 @@ export default function App() {
         fetchApprovedOrganizations(),
         fetchApprovedOpportunities(),
       ]);
-
-      if (remoteOrgs.length > 0) {
-        setOrganizations(remoteOrgs);
-        localStorage.setItem('c4c_orgs_cache', JSON.stringify(remoteOrgs));
-      } else {
-        // Fallback to built-in verified sample dataset so initial state is never blank
-        const sampleOrgsWithIds: Organization[] = SAMPLE_ORGANIZATIONS.map((o) => ({
-          ...o,
-          id: o.ownerUid,
-        }));
-        setOrganizations(sampleOrgsWithIds);
-      }
-
-      if (remoteOpps.length > 0) {
-        setOpportunities(remoteOpps);
-        localStorage.setItem('c4c_opps_cache', JSON.stringify(remoteOpps));
-      } else {
-        const sampleOppsWithIds: Opportunity[] = SAMPLE_OPPORTUNITIES.map((o, idx) => ({
-          ...o,
-          id: `sample_opp_${idx + 1}`,
-        }));
-        setOpportunities(sampleOppsWithIds);
-      }
+      setOrganizations(remoteOrgs);
+      setOpportunities(remoteOpps);
+      writeCache('c4c_orgs_cache', remoteOrgs);
+      writeCache('c4c_opps_cache', remoteOpps);
     } catch {
-      // Offline / cached recovery
-      const cachedOrgs = localStorage.getItem('c4c_orgs_cache');
-      const cachedOpps = localStorage.getItem('c4c_opps_cache');
-      if (cachedOrgs) setOrganizations(JSON.parse(cachedOrgs));
-      else {
-        setOrganizations(
-          SAMPLE_ORGANIZATIONS.map((o) => ({
-            ...o,
-            id: o.ownerUid,
-          }))
-        );
-      }
-
-      if (cachedOpps) setOpportunities(JSON.parse(cachedOpps));
-      else {
-        setOpportunities(
-          SAMPLE_OPPORTUNITIES.map((o, idx) => ({
-            ...o,
-            id: `sample_opp_${idx + 1}`,
-          }))
-        );
-      }
+      setOrganizations(readCache<Organization>('c4c_orgs_cache'));
+      setOpportunities(readCache<Opportunity>('c4c_opps_cache'));
     } finally {
       setDataLoading(false);
     }
@@ -136,6 +114,15 @@ export default function App() {
     try {
       await signInWithPopup(auth, googleProvider);
       setActiveTab('dashboard');
+    } catch (err) {
+      console.error('Sign-in error:', err);
+    }
+  };
+
+  // Sign in without leaving the current page (e.g. to claim a place)
+  const handleSignInInPlace = async () => {
+    try {
+      await signInWithPopup(auth, googleProvider);
     } catch (err) {
       console.error('Sign-in error:', err);
     }
@@ -332,6 +319,8 @@ export default function App() {
             opportunities={opportunities}
             onBack={() => setSelectedOrganization(null)}
             onSelectOpportunity={handleSelectOpportunity}
+            user={user}
+            onSignIn={handleSignInInPlace}
           />
         ) : activeTab === 'home' ? (
           <HomeView

@@ -29,38 +29,58 @@ service cloud.firestore {
 
     // Organizations collection
     // Document ID is the owner's UID
+    // Owners self-registered at /organizations/{uid}. Team-managed places (added by admins)
+    // have a random id and an empty ownerUid until an admin approves a claim and sets ownerUid.
     match /organizations/{orgId} {
-      // Anyone can get or list approved organizations
-      // Admins can read all (approved, pending, rejected)
-      // Owners can read their own organization
-      allow get: if resource.data.status == 'approved' || (isSignedIn() && (request.auth.uid == orgId || isAdmin()));
-      allow list: if resource.data.status == 'approved' || (isSignedIn() && (resource.data.ownerUid == request.auth.uid || isAdmin()));
+      function isOwner() {
+        return isSignedIn() && resource.data.ownerUid == request.auth.uid;
+      }
 
-      // Create: Owner can create their own doc with status 'pending' (or admin can create approved/sample)
+      // Anyone can read approved places; owners and admins can also read unpublished ones
+      allow get: if resource.data.status == 'approved' || isOwner() || isAdmin();
+      allow list: if resource.data.status == 'approved' || isOwner() || isAdmin();
+
+      // Create: owners create their own doc with status 'pending'; admins can create anything
+      // (including approved team-managed places)
       allow create: if (
         isAdmin() || (
           isSignedIn() &&
           request.auth.uid == orgId &&
           request.resource.data.ownerUid == request.auth.uid &&
           request.resource.data.status == 'pending' &&
-          request.resource.data.isSample == false
+          request.resource.data.isSample == false &&
+          request.resource.data.get('managedBy', 'owner') == 'owner'
         )
       );
 
-      // Update: Owner can update their own organization but status must remain or reset to 'pending'.
-      // Admins can update any field including status and isSample.
+      // Update: owners edit their place but it goes back to 'pending' and they cannot hand it
+      // to someone else or mark it team-managed. Admins can update anything.
       allow update: if (
         isAdmin() || (
-          isSignedIn() &&
-          request.auth.uid == orgId &&
+          isOwner() &&
           request.resource.data.ownerUid == request.auth.uid &&
           request.resource.data.status == 'pending' &&
-          request.resource.data.isSample == resource.data.isSample
+          request.resource.data.isSample == resource.data.isSample &&
+          request.resource.data.get('managedBy', 'owner') == 'owner'
         )
       );
 
-      // Delete: Admins or owner can delete
-      allow delete: if isAdmin() || (isSignedIn() && request.auth.uid == orgId);
+      // Delete: admins, or the owner of a self-registered profile
+      allow delete: if isAdmin() || (isOwner() && request.auth.uid == orgId);
+    }
+
+    // Claims on team-managed places. Only admins can approve (which sets the place's ownerUid).
+    match /claims/{claimId} {
+      allow create: if isSignedIn() &&
+        request.resource.data.claimantUid == request.auth.uid &&
+        request.resource.data.status == 'pending' &&
+        request.resource.data.orgId is string &&
+        request.resource.data.relationship is string && request.resource.data.relationship.size() <= 200 &&
+        request.resource.data.phone is string && request.resource.data.phone.size() <= 40 &&
+        request.resource.data.verificationDetails is string && request.resource.data.verificationDetails.size() <= 2000 &&
+        get(/databases/$(database)/documents/organizations/$(request.resource.data.orgId)).data.managedBy == 'team';
+      allow read: if isAdmin() || (isSignedIn() && resource.data.claimantUid == request.auth.uid);
+      allow update, delete: if isAdmin();
     }
 
     // Opportunities collection

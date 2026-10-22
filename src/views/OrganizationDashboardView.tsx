@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { User } from 'firebase/auth';
-import { Organization, Opportunity, OrgType, CameroonRegion, OpportunityRegion, PowerReliability, InternetReliability, OpportunityCategory, EducationLevel, UserRole } from '../types';
+import { Organization, Opportunity, OpportunityRegion, OpportunityCategory, EducationLevel, UserRole } from '../types';
+import { PlaceFormFields } from '../components/PlaceFormFields';
+import { PlaceDraft, emptyPlaceDraft, placeDraftFromOrg, placeFieldsFromDraft } from '../lib/places';
 import {
   fetchOrgByOwner,
   saveOrganizationProfile,
@@ -11,7 +13,7 @@ import {
 import { StatusBadge, FreeBadge, PaidBadge } from '../components/Badges';
 import { sendToFormspree } from '../lib/formspree';
 import { useLanguage } from '../context/LanguageContext';
-import { CAMEROON_REGIONS, OPPORTUNITY_REGIONS, resolveRegion, editableTown, formatLocation } from '../lib/regions';
+import { OPPORTUNITY_REGIONS, resolveRegion, editableTown, formatLocation } from '../lib/regions';
 import {
   Building2,
   Plus,
@@ -54,24 +56,7 @@ export const OrganizationDashboardView: React.FC<OrganizationDashboardProps> = (
 
   const [organization, setOrganization] = useState<Organization | null>(null);
 
-  const [name, setName] = useState('');
-  const [type, setType] = useState<OrgType>('Technology hub');
-  const [region, setRegion] = useState<CameroonRegion | ''>('');
-  const [town, setTown] = useState('');
-  const [address, setAddress] = useState('');
-  const [contactPhone, setContactPhone] = useState('');
-  const [contactEmail, setContactEmail] = useState(user.email || '');
-  const [website, setWebsite] = useState('');
-  const [logoUrl, setLogoUrl] = useState('');
-  const [imageUrl, setImageUrl] = useState('');
-  const [description, setDescription] = useState('');
-  const [facilities, setFacilities] = useState<string[]>(['Computers', 'Internet', 'Power backup']);
-  const [studentAccess, setStudentAccess] = useState('');
-  const [fees, setFees] = useState('');
-  const [openingHours, setOpeningHours] = useState('');
-  const [powerReliability, setPowerReliability] = useState<PowerReliability>('Backup power available');
-  const [internetReliability, setInternetReliability] = useState<InternetReliability>('Stable');
-  const [bookingRequired, setBookingRequired] = useState(false);
+  const [draft, setDraft] = useState<PlaceDraft>(() => emptyPlaceDraft(user.email || ''));
 
   const [myOpportunities, setMyOpportunities] = useState<Opportunity[]>([]);
   const [isEditingOpp, setIsEditingOpp] = useState(false);
@@ -92,17 +77,6 @@ export const OrganizationDashboardView: React.FC<OrganizationDashboardProps> = (
   const [oppRegistrationLink, setOppRegistrationLink] = useState('');
   const [oppFlyerUrl, setOppFlyerUrl] = useState('');
   const [oppImageUrl, setOppImageUrl] = useState('');
-
-  const availableFacilities = [
-    'Computers',
-    'Internet',
-    'Workspace',
-    'Power backup',
-    'Equipment',
-    'Software',
-    'Library',
-    'Meeting space',
-  ];
 
   const availableInterests = [
     'Technology',
@@ -133,25 +107,8 @@ export const OrganizationDashboardView: React.FC<OrganizationDashboardProps> = (
       const org = await fetchOrgByOwner(user.uid);
       if (org) {
         setOrganization(org);
-        setName(org.name || '');
-        setType(org.type || 'Technology hub');
-        const orgRegion = resolveRegion(org);
-        setRegion(orgRegion && orgRegion !== 'Online' ? orgRegion : '');
-        setTown(editableTown(org.town));
-        setAddress(org.address || '');
-        setContactPhone(org.contactPhone || '');
-        setContactEmail(org.contactEmail || user.email || '');
-        setWebsite(org.website || '');
-        setLogoUrl(org.logoUrl || '');
-        setImageUrl(org.imageUrl || '');
-        setDescription(org.description || '');
-        setFacilities(org.facilities || ['Computers', 'Internet']);
-        setStudentAccess(org.studentAccess || '');
-        setFees(org.fees || '');
-        setOpeningHours(org.openingHours || '');
-        setPowerReliability(org.powerReliability || 'Backup power available');
-        setInternetReliability(org.internetReliability || 'Stable');
-        setBookingRequired(Boolean(org.bookingRequired));
+        const loaded = placeDraftFromOrg(org);
+        setDraft({ ...loaded, contactEmail: loaded.contactEmail || user.email || '' });
       }
 
       const opps = await fetchOpportunitiesByOrg(user.uid);
@@ -160,14 +117,6 @@ export const OrganizationDashboardView: React.FC<OrganizationDashboardProps> = (
       setErrorMsg('Failed to load your organization records.');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleFacilityToggle = (facility: string) => {
-    if (facilities.includes(facility)) {
-      setFacilities(facilities.filter(f => f !== facility));
-    } else {
-      setFacilities([...facilities, facility]);
     }
   };
 
@@ -196,69 +145,33 @@ export const OrganizationDashboardView: React.FC<OrganizationDashboardProps> = (
       return;
     }
 
-    if (!region) {
-      setErrorMsg(t.regionRequiredError);
+    if (!draft.name.trim()) {
+      setErrorMsg(t.placeNameRequired);
       return;
     }
-    if (!name.trim()) {
-      setErrorMsg('Organization name is required.');
+    if (!draft.region) {
+      setErrorMsg(t.regionRequiredError);
       return;
     }
     setErrorMsg('');
     setSuccessMsg('');
     setSaving(true);
     try {
+      const fields = placeFieldsFromDraft(draft);
+
       // 1. Save to Firestore first
-      await saveOrganizationProfile(
-        user.uid,
-        {
-          name: name.trim(),
-          type,
-          region: region || undefined,
-          town: town.trim(),
-          address: address.trim(),
-          contactPhone: contactPhone.trim(),
-          contactEmail: contactEmail.trim(),
-          website: website.trim(),
-          logoUrl: logoUrl.trim(),
-          imageUrl: imageUrl.trim(),
-          description: description.trim(),
-          facilities,
-          studentAccess: studentAccess.trim(),
-          fees: fees.trim(),
-          openingHours: openingHours.trim(),
-          powerReliability,
-          internetReliability,
-          bookingRequired,
-          lastConfirmed: new Date().toISOString().split('T')[0],
-        },
-        organization
-      );
+      await saveOrganizationProfile(user.uid, fields, organization);
 
       // 2. Send non-blocking copy to Formspree
       sendToFormspree('organization_profile', {
         action: organization ? 'edit' : 'create',
-        organizationId: user.uid,
-        name: name.trim(),
-        type,
-        region,
-        town: town.trim(),
-        address: address.trim(),
-        contactPhone: contactPhone.trim(),
-        contactEmail: contactEmail.trim(),
-        submitterEmail: user.email || contactEmail.trim(),
-        website: website.trim(),
-        logoUrl: logoUrl.trim(),
-        imageUrl: imageUrl.trim(),
-        description: description.trim(),
-        facilities,
-        studentAccess: studentAccess.trim(),
-        fees: fees.trim(),
-        openingHours: openingHours.trim(),
-        powerReliability,
-        internetReliability,
-        bookingRequired: bookingRequired ? 'Yes (Advance booking required)' : 'No (Walk-ins welcome)',
-        lastConfirmed: new Date().toISOString().split('T')[0],
+        organizationId: organization?.id || user.uid,
+        submitterEmail: user.email || fields.contactEmail,
+        ...fields,
+        ...fields.socialLinks,
+        socialLinks: undefined,
+        bookingRequired:
+          fields.bookingRequired === null ? 'Unknown' : fields.bookingRequired ? 'Booking required' : 'Walk-ins welcome',
         _gotcha: profileGotcha,
       }).catch(err => console.warn('Formspree org profile error:', err));
 
@@ -296,8 +209,8 @@ export const OrganizationDashboardView: React.FC<OrganizationDashboardProps> = (
       setOppDescription('');
       setOppInterests(['Technology']);
       setOppEducation(['University']);
-      setOppRegion(region);
-      setOppTown(town);
+      setOppRegion(draft.region);
+      setOppTown(draft.town);
       setOppStartDate('');
       const d = new Date();
       d.setDate(d.getDate() + 30);
@@ -336,7 +249,7 @@ export const OrganizationDashboardView: React.FC<OrganizationDashboardProps> = (
     try {
       // 1. Save to Firestore first
       const savedId = await saveOpportunity(user.uid, currentOppId, {
-        orgName: name || 'Local Organization',
+        orgName: draft.name || organization?.name || 'Local Organization',
         title: oppTitle.trim(),
         category: oppCategory,
         description: oppDescription.trim(),
@@ -359,8 +272,8 @@ export const OrganizationDashboardView: React.FC<OrganizationDashboardProps> = (
         action: currentOppId ? 'edit' : 'create',
         opportunityId: savedId || currentOppId || 'new',
         orgId: user.uid,
-        orgName: name || 'Local Organization',
-        submitterEmail: user.email || contactEmail.trim(),
+        orgName: draft.name || organization?.name || 'Local Organization',
+        submitterEmail: user.email || draft.contactEmail.trim(),
         title: oppTitle.trim(),
         category: oppCategory,
         description: oppDescription.trim(),
@@ -495,321 +408,11 @@ export const OrganizationDashboardView: React.FC<OrganizationDashboardProps> = (
               />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="sm:col-span-2">
-                <label className="block text-xs font-bold text-[#1C211E] mb-1 uppercase tracking-wider">
-                  Organization / Center Name *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={name}
-                  onChange={e => setName(e.target.value)}
-                  placeholder="e.g. Silicon Mountain Tech Hub"
-                  className="w-full bg-[#F8F5EE] border border-[#E2DDD5] text-sm rounded-sm px-3 py-2 text-[#1C211E] focus:outline-none focus:border-[#16402E]"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-[#1C211E] mb-1 uppercase tracking-wider">
-                  Organization Type *
-                </label>
-                <select
-                  value={type}
-                  onChange={e => setType(e.target.value as OrgType)}
-                  className="w-full bg-[#F8F5EE] border border-[#E2DDD5] text-sm rounded-sm px-3 py-2 text-[#1C211E] focus:outline-none focus:border-[#16402E]"
-                >
-                  <option value="Learning center">Learning center</option>
-                  <option value="Training provider">Training provider</option>
-                  <option value="NGO">NGO</option>
-                  <option value="Technology hub">Technology hub</option>
-                  <option value="Educational institution">Educational institution</option>
-                  <option value="Other">Other</option>
-                </select>
-              </div>
-
-              <div>
-                <label htmlFor="org-region" className="block text-xs font-bold text-[#1C211E] mb-1 uppercase tracking-wider">
-                  {t.regionRequired}
-                </label>
-                <select
-                  id="org-region"
-                  required
-                  value={region}
-                  onChange={e => setRegion(e.target.value as CameroonRegion | '')}
-                  className="w-full bg-[#F8F5EE] border border-[#E2DDD5] text-sm rounded-sm px-3 py-2 text-[#1C211E] focus:outline-none focus:border-[#16402E]"
-                >
-                  <option value="">{t.chooseRegion}</option>
-                  {CAMEROON_REGIONS.map(r => (
-                    <option key={r} value={r}>{t.regionNames[r]}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label htmlFor="org-town" className="block text-xs font-bold text-[#1C211E] mb-1 uppercase tracking-wider">
-                  {t.townField}
-                </label>
-                <input
-                  id="org-town"
-                  type="text"
-                  value={town}
-                  onChange={e => setTown(e.target.value)}
-                  placeholder={t.townPlaceholder}
-                  className="w-full bg-[#F8F5EE] border border-[#E2DDD5] text-sm rounded-sm px-3 py-2 text-[#1C211E] focus:outline-none focus:border-[#16402E]"
-                />
-              </div>
-
-              <div className="sm:col-span-2">
-                <label className="block text-xs font-bold text-[#1C211E] mb-1 uppercase tracking-wider">
-                  Physical Address & Landmarks *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={address}
-                  onChange={e => setAddress(e.target.value)}
-                  placeholder={t.addressPlaceholder}
-                  className="w-full bg-[#F8F5EE] border border-[#E2DDD5] text-sm rounded-sm px-3 py-2 text-[#1C211E] focus:outline-none focus:border-[#16402E]"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-[#1C211E] mb-1 uppercase tracking-wider">
-                  Contact Phone (WhatsApp)
-                </label>
-                <input
-                  type="tel"
-                  value={contactPhone}
-                  onChange={e => setContactPhone(e.target.value)}
-                  placeholder="+237 6XX XXX XXX"
-                  className="w-full bg-[#F8F5EE] border border-[#E2DDD5] text-sm rounded-sm px-3 py-2 text-[#1C211E] focus:outline-none focus:border-[#16402E]"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-[#1C211E] mb-1 uppercase tracking-wider">
-                  Official Email
-                </label>
-                <input
-                  type="email"
-                  value={contactEmail}
-                  onChange={e => setContactEmail(e.target.value)}
-                  placeholder="contact@organization.cm"
-                  className="w-full bg-[#F8F5EE] border border-[#E2DDD5] text-sm rounded-sm px-3 py-2 text-[#1C211E] focus:outline-none focus:border-[#16402E]"
-                />
-              </div>
-
-              <div className="sm:col-span-2">
-                <label className="block text-xs font-bold text-[#1C211E] mb-1 uppercase tracking-wider">
-                  Website or Social Page
-                </label>
-                <input
-                  type="url"
-                  value={website}
-                  onChange={e => setWebsite(e.target.value)}
-                  placeholder="https://..."
-                  className="w-full bg-[#F8F5EE] border border-[#E2DDD5] text-sm rounded-sm px-3 py-2 text-[#1C211E] focus:outline-none focus:border-[#16402E]"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-[#1C211E] mb-1 uppercase tracking-wider">
-                  Logo / Emblem Image URL (Optional)
-                </label>
-                <input
-                  type="url"
-                  value={logoUrl}
-                  onChange={e => setLogoUrl(e.target.value)}
-                  placeholder="https://example.com/logo.png"
-                  className="w-full bg-[#F8F5EE] border border-[#E2DDD5] text-sm rounded-sm px-3 py-2 text-[#1C211E] focus:outline-none focus:border-[#16402E]"
-                />
-                <span className="text-[11px] text-[#555E57] block mt-1">
-                  Optional. If left blank, C4C provides an authentic Cameroonian SVG emblem.
-                </span>
-                {logoUrl.trim() && (
-                  <div className="mt-2 flex items-center gap-2">
-                    <span className="text-[10px] text-[#555E57] uppercase font-bold">Logo Preview:</span>
-                    <img
-                      src={logoUrl.trim()}
-                      alt="Logo preview"
-                      referrerPolicy="no-referrer"
-                      className="w-8 h-8 object-contain border border-[#E2DDD5] bg-white rounded-sm p-0.5"
-                      onError={e => {
-                        (e.target as HTMLElement).style.display = 'none';
-                      }}
-                    />
-                  </div>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-[#1C211E] mb-1 uppercase tracking-wider">
-                  Facility / Workspace Photo URL (Optional)
-                </label>
-                <input
-                  type="url"
-                  value={imageUrl}
-                  onChange={e => setImageUrl(e.target.value)}
-                  placeholder="https://example.com/workspace.jpg"
-                  className="w-full bg-[#F8F5EE] border border-[#E2DDD5] text-sm rounded-sm px-3 py-2 text-[#1C211E] focus:outline-none focus:border-[#16402E]"
-                />
-                <span className="text-[11px] text-[#555E57] block mt-1">
-                  Photo of your computers, lab, solar setup, or entrance.
-                </span>
-                {imageUrl.trim() && (
-                  <div className="mt-2 flex items-center gap-2">
-                    <span className="text-[10px] text-[#555E57] uppercase font-bold">Photo Preview:</span>
-                    <img
-                      src={imageUrl.trim()}
-                      alt="Facility photo preview"
-                      referrerPolicy="no-referrer"
-                      className="w-16 h-10 object-cover border border-[#E2DDD5] bg-white rounded-sm"
-                      onError={e => {
-                        (e.target as HTMLElement).style.display = 'none';
-                      }}
-                    />
-                  </div>
-                )}
-              </div>
-
-              <div className="sm:col-span-2">
-                <label className="block text-xs font-bold text-[#1C211E] mb-1 uppercase tracking-wider">
-                  Overview Description
-                </label>
-                <textarea
-                  rows={3}
-                  value={description}
-                  onChange={e => setDescription(e.target.value)}
-                  placeholder="Brief summary of your mission, programs, and work in the community..."
-                  className="w-full bg-[#F8F5EE] border border-[#E2DDD5] text-sm rounded-sm p-3 text-[#1C211E] focus:outline-none focus:border-[#16402E] resize-none"
-                />
-              </div>
-            </div>
-
-            <div className="pt-4 border-t-2 border-[#16402E] space-y-4">
-              <div className="bg-[#16402E] text-white px-3 py-1.5 rounded-sm flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-[#D95D39]" />
-                <span className="font-heading font-bold text-xs uppercase tracking-wider">
-                  Practical Access Specifications
-                </span>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-[#1C211E] mb-1 uppercase tracking-wider">
-                  Who May Use It and Under What Conditions? *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={studentAccess}
-                  onChange={e => setStudentAccess(e.target.value)}
-                  placeholder="e.g. Open to all secondary and university students with valid student ID."
-                  className="w-full bg-[#F8F5EE] border border-[#E2DDD5] text-sm rounded-sm px-3 py-2 text-[#1C211E] focus:outline-none focus:border-[#16402E]"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-[#1C211E] mb-1 uppercase tracking-wider">
-                  Fees & Membership Costs *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={fees}
-                  onChange={e => setFees(e.target.value)}
-                  placeholder="e.g. Free during student hours; 1,000 XAF/day for coworking."
-                  className="w-full bg-[#F8F5EE] border border-[#E2DDD5] text-sm rounded-sm px-3 py-2 text-[#1C211E] focus:outline-none focus:border-[#16402E]"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-[#1C211E] mb-1 uppercase tracking-wider">
-                  Opening Hours *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={openingHours}
-                  onChange={e => setOpeningHours(e.target.value)}
-                  placeholder="e.g. Mon - Fri: 8:00 AM - 6:00 PM; Sat: 9:00 AM - 2:00 PM"
-                  className="w-full bg-[#F8F5EE] border border-[#E2DDD5] text-sm rounded-sm px-3 py-2 text-[#1C211E] focus:outline-none focus:border-[#16402E]"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-[#1C211E] mb-1 uppercase tracking-wider">
-                    Power Reliability *
-                  </label>
-                  <select
-                    value={powerReliability}
-                    onChange={e => setPowerReliability(e.target.value as PowerReliability)}
-                    className="w-full bg-[#F8F5EE] border border-[#E2DDD5] text-sm rounded-sm px-3 py-2 text-[#1C211E] focus:outline-none focus:border-[#16402E]"
-                  >
-                    <option value="Backup power available">Backup power available (Generator/Solar)</option>
-                    <option value="Grid power only">Grid power only</option>
-                    <option value="Unreliable power">Unreliable power</option>
-                    <option value="Unknown">Unknown</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-[#1C211E] mb-1 uppercase tracking-wider">
-                    Internet Reliability *
-                  </label>
-                  <select
-                    value={internetReliability}
-                    onChange={e => setInternetReliability(e.target.value as InternetReliability)}
-                    className="w-full bg-[#F8F5EE] border border-[#E2DDD5] text-sm rounded-sm px-3 py-2 text-[#1C211E] focus:outline-none focus:border-[#16402E]"
-                  >
-                    <option value="Stable">Stable (Fiber / Fast Broadband)</option>
-                    <option value="Limited">Limited (Mobile hotspot / Occasional)</option>
-                    <option value="None">None</option>
-                    <option value="Unknown">Unknown</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2 p-3 bg-[#F8F5EE] border border-[#E2DDD5] rounded-sm">
-                <input
-                  type="checkbox"
-                  id="bookingRequired"
-                  checked={bookingRequired}
-                  onChange={e => setBookingRequired(e.target.checked)}
-                  className="w-4 h-4 text-[#16402E] rounded focus:ring-0"
-                />
-                <label htmlFor="bookingRequired" className="text-xs font-bold text-[#1C211E] cursor-pointer">
-                  Prior booking or appointment is required before visiting
-                </label>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-[#1C211E] mb-2 uppercase tracking-wider">
-                  Available Facilities
-                </label>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  {availableFacilities.map(fac => (
-                    <label
-                      key={fac}
-                      className={`flex items-center gap-2 p-2 border rounded-sm text-xs cursor-pointer transition-colors ${
-                        facilities.includes(fac)
-                          ? 'bg-[#16402E] text-white border-[#16402E] font-bold'
-                          : 'bg-[#F8F5EE] text-[#1C211E] border-[#E2DDD5]'
-                      }`}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={facilities.includes(fac)}
-                        onChange={() => handleFacilityToggle(fac)}
-                        className="sr-only"
-                      />
-                      <span>{fac}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-            </div>
+            <PlaceFormFields
+              draft={draft}
+              onChange={patch => setDraft(prev => ({ ...prev, ...patch }))}
+              mode="owner"
+            />
 
             <div className="pt-4 border-t border-[#E2DDD5] flex justify-end">
               <button
@@ -1093,30 +696,6 @@ export const OrganizationDashboardView: React.FC<OrganizationDashboardProps> = (
                       placeholder="Paste image URL of flyer/poster (JPG, PNG, WebP)"
                       className="w-full bg-white border border-[#E2DDD5] rounded-sm px-3 py-2 text-xs text-[#1C211E] focus:outline-none focus:border-[#16402E]"
                     />
-                    <div className="flex flex-wrap items-center gap-1.5 mt-1.5 text-[11px]">
-                      <span className="text-[#555E57] font-medium">Quick presets:</span>
-                      <button
-                        type="button"
-                        onClick={() => setOppFlyerUrl('/src/assets/images/buea_tech_flyer_1792615562787.jpg')}
-                        className="px-2 py-0.5 bg-[#EFE9DC] text-[#16402E] rounded-sm font-semibold hover:bg-[#E2DDD5] transition-colors"
-                      >
-                        Tech Bootcamp Poster
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setOppFlyerUrl('/src/assets/images/agritech_hack_flyer_1792615579114.jpg')}
-                        className="px-2 py-0.5 bg-[#EFE9DC] text-[#16402E] rounded-sm font-semibold hover:bg-[#E2DDD5] transition-colors"
-                      >
-                        Hackathon Poster
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setOppFlyerUrl('/src/assets/images/women_tech_flyer_1792615593216.jpg')}
-                        className="px-2 py-0.5 bg-[#EFE9DC] text-[#16402E] rounded-sm font-semibold hover:bg-[#E2DDD5] transition-colors"
-                      >
-                        Women in Tech Poster
-                      </button>
-                    </div>
                   </div>
 
                   <div>

@@ -5,6 +5,7 @@ import { Search, RotateCcw } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { CAMEROON_REGIONS, resolveRegion, normalizeText } from '../lib/regions';
 import { matchesQuery } from '../lib/search';
+import { PLACE_TYPES, placeTypeLabel } from '../lib/places';
 import { translations } from '../lib/translations';
 
 interface OrganizationsViewProps {
@@ -24,11 +25,10 @@ export const OrganizationsView: React.FC<OrganizationsViewProps> = ({
 }) => {
   const { t } = useLanguage();
   const [searchQuery, setSearchQuery] = useState(initialFilters?.query || '');
-  const [selectedType, setSelectedType] = useState('All');
+  const [selectedType, setSelectedType] = useState(initialFilters?.placeType || 'All');
   const [selectedRegion, setSelectedRegion] = useState(initialFilters?.region || 'All');
   const [townFilter, setTownFilter] = useState('');
 
-  const typesList = ['All', 'Learning center', 'Training provider', 'NGO', 'Technology hub', 'Educational institution', 'Other'];
 
   const filteredOrganizations = useMemo(() => {
     return organizations.filter(org => {
@@ -43,6 +43,7 @@ export const OrganizationsView: React.FC<OrganizationsViewProps> = ({
           org.address,
           org.town,
           org.type,
+          translations.fr.placeTypeNames[org.type],
           org.fees,
           org.studentAccess,
           ...(org.facilities || []),
@@ -105,13 +106,14 @@ export const OrganizationsView: React.FC<OrganizationsViewProps> = ({
           <div className="grid grid-cols-1 min-[400px]:grid-cols-3 gap-2 sm:flex">
             <div className="sm:w-44">
               <select
-                aria-label="Type"
+                aria-label={t.placeTypeLabel}
                 value={selectedType}
                 onChange={e => setSelectedType(e.target.value)}
                 className="w-full bg-[#F8F5EE] border border-[#E2DDD5] rounded-sm px-3 py-2 text-xs text-[#1C211E] focus:outline-none focus:border-[#16402E]"
               >
-                {typesList.map(t => (
-                  <option key={t} value={t}>{t === 'All' ? 'All Types' : t}</option>
+                <option value="All">{t.allTypes}</option>
+                {PLACE_TYPES.map(type => (
+                  <option key={type} value={type}>{placeTypeLabel(type, t)}</option>
                 ))}
               </select>
             </div>
@@ -181,10 +183,10 @@ export const OrganizationsView: React.FC<OrganizationsViewProps> = ({
         ) : (
           <div className="bg-white border-2 border-dashed border-[#E2DDD5] p-8 text-center rounded-sm">
             <p className="font-heading font-bold text-base text-[#1C211E] mb-1">
-              No organizations found matching these filters
+              {organizations.length === 0 ? t.noPlacesYet : "No organizations found matching these filters"}
             </p>
             <p className="text-xs text-[#555E57] mb-4">
-              Try clearing the search query or selecting a different town.
+              {organizations.length === 0 ? t.noPlacesYetDesc : "Try clearing the search query or selecting a different town."}
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-2">
               {hasActiveFilters && (

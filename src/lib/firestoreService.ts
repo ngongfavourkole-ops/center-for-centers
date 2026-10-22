@@ -9,23 +9,28 @@ import {
   deleteDoc,
   query,
   where,
+  limit,
+  writeBatch,
 } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from './firebase';
-import { Organization, Opportunity, Report, ApprovalStatus, UserProfile, UserRole } from '../types';
-import { SAMPLE_ORGANIZATIONS, SAMPLE_OPPORTUNITIES } from '../data/sampleData';
+import { Organization, Opportunity, Report, ApprovalStatus, UserProfile, UserRole, Claim } from '../types';
+import { PlaceFields } from './places';
 
 const ORGS_COLLECTION = 'organizations';
 const OPPS_COLLECTION = 'opportunities';
 const REPORTS_COLLECTION = 'reports';
 const USERS_COLLECTION = 'users';
+const CLAIMS_COLLECTION = 'claims';
 
+// Older demo records may still be in the database; they are never shown publicly.
 export async function fetchApprovedOrganizations(): Promise<Organization[]> {
   try {
     const q = query(collection(db, ORGS_COLLECTION), where('status', '==', 'approved'));
     const snapshot = await getDocs(q);
     const orgs: Organization[] = [];
     snapshot.forEach(docSnap => {
-      orgs.push({ id: docSnap.id, ...(docSnap.data() as Omit<Organization, 'id'>) });
+      const data = docSnap.data() as Omit<Organization, 'id'>;
+      if (!data.isSample) orgs.push({ id: docSnap.id, ...data });
     });
     return orgs;
   } catch (error) {
@@ -40,7 +45,8 @@ export async function fetchApprovedOpportunities(): Promise<Opportunity[]> {
     const snapshot = await getDocs(q);
     const opps: Opportunity[] = [];
     snapshot.forEach(docSnap => {
-      opps.push({ id: docSnap.id, ...(docSnap.data() as Omit<Opportunity, 'id'>) });
+      const data = docSnap.data() as Omit<Opportunity, 'id'>;
+      if (!data.isSample) opps.push({ id: docSnap.id, ...data });
     });
     return opps;
   } catch (error) {
@@ -75,11 +81,19 @@ export async function fetchOpportunityById(id: string): Promise<Opportunity | nu
   }
 }
 
+// Owners who created their own profile have it at /organizations/{uid}.
+// Owners of a claimed team-managed place have it under its original id with ownerUid set.
 export async function fetchOrgByOwner(ownerUid: string): Promise<Organization | null> {
   try {
     const docSnap = await getDoc(doc(db, ORGS_COLLECTION, ownerUid));
     if (docSnap.exists()) {
       return { id: docSnap.id, ...(docSnap.data() as Omit<Organization, 'id'>) };
+    }
+    const q = query(collection(db, ORGS_COLLECTION), where('ownerUid', '==', ownerUid), limit(1));
+    const snapshot = await getDocs(q);
+    if (!snapshot.empty) {
+      const first = snapshot.docs[0];
+      return { id: first.id, ...(first.data() as Omit<Organization, 'id'>) };
     }
     return null;
   } catch (error) {
@@ -100,22 +114,126 @@ function removeUndefined<T extends Record<string, any>>(obj: T): Partial<T> {
 
 export async function saveOrganizationProfile(
   ownerUid: string,
-  data: Omit<Organization, 'id' | 'ownerUid' | 'status' | 'isSample' | 'createdAt'>,
+  data: PlaceFields,
   existingOrg?: Organization | null
 ): Promise<void> {
-  const orgRef = doc(db, ORGS_COLLECTION, ownerUid);
-  const payload: Omit<Organization, 'id'> = {
+  const orgId = existingOrg?.id || ownerUid;
+  const orgRef = doc(db, ORGS_COLLECTION, orgId);
+  const payload = {
     ...data,
     ownerUid,
-    status: 'pending',
-    isSample: existingOrg ? existingOrg.isSample : false,
+    managedBy: 'owner' as const,
+    status: 'pending' as const,
+    isSample: existingOrg ? Boolean(existingOrg.isSample) : false,
     createdAt: existingOrg ? existingOrg.createdAt : new Date().toISOString(),
   };
 
   try {
     await setDoc(orgRef, removeUndefined(payload), { merge: true });
   } catch (error) {
-    handleFirestoreError(error, OperationType.WRITE, `${ORGS_COLLECTION}/${ownerUid}`);
+    handleFirestoreError(error, OperationType.WRITE, `${ORGS_COLLECTION}/${orgId}`);
+  }
+}
+
+// Admin "Add place": published immediately and labelled as team-managed until claimed.
+export async function adminCreatePlace(adminUid: string, data: PlaceFields, sourceNote: string): Promise<string> {
+  try {
+    const ref = await addDoc(collection(db, ORGS_COLLECTION), removeUndefined({
+      ...data,
+      sourceNote,
+      ownerUid: '',
+      managedBy: 'team',
+      addedBy: adminUid,
+      status: 'approved',
+      isSample: false,
+      createdAt: new Date().toISOString(),
+    }));
+    return ref.id;
+  } catch (error) {
+    handleFirestoreError(error, OperationType.CREATE, ORGS_COLLECTION);
+    throw error;
+  }
+}
+
+export async function adminUpdatePlace(orgId: string, data: PlaceFields, sourceNote: string): Promise<void> {
+  try {
+    await updateDoc(doc(db, ORGS_COLLECTION, orgId), removeUndefined({
+      ...data,
+      sourceNote,
+      updatedAt: new Date().toISOString(),
+    }));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.UPDATE, `${ORGS_COLLECTION}/${orgId}`);
+  }
+}
+
+export async function adminDeletePlace(orgId: string): Promise<void> {
+  try {
+    await deleteDoc(doc(db, ORGS_COLLECTION, orgId));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, `${ORGS_COLLECTION}/${orgId}`);
+  }
+}
+
+export async function submitClaim(claim: Omit<Claim, 'id' | 'status' | 'createdAt'>): Promise<void> {
+  try {
+    await addDoc(collection(db, CLAIMS_COLLECTION), {
+      ...claim,
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+    });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.CREATE, CLAIMS_COLLECTION);
+  }
+}
+
+export async function fetchMyClaims(uid: string): Promise<Claim[]> {
+  try {
+    const q = query(collection(db, CLAIMS_COLLECTION), where('claimantUid', '==', uid));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(d => ({ id: d.id, ...(d.data() as Omit<Claim, 'id'>) }));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.LIST, CLAIMS_COLLECTION);
+    return [];
+  }
+}
+
+export async function fetchClaimsForAdmin(): Promise<Claim[]> {
+  try {
+    const snapshot = await getDocs(collection(db, CLAIMS_COLLECTION));
+    return snapshot.docs.map(d => ({ id: d.id, ...(d.data() as Omit<Claim, 'id'>) }));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.LIST, CLAIMS_COLLECTION);
+    return [];
+  }
+}
+
+// Hands the place over to the claimant and closes the claim in one batch.
+export async function approveClaim(claim: Claim): Promise<void> {
+  if (!claim.id) return;
+  const now = new Date().toISOString();
+  try {
+    const batch = writeBatch(db);
+    batch.update(doc(db, ORGS_COLLECTION, claim.orgId), {
+      ownerUid: claim.claimantUid,
+      managedBy: 'owner',
+      claimedAt: now,
+    });
+    batch.update(doc(db, CLAIMS_COLLECTION, claim.id), { status: 'approved', reviewedAt: now });
+    await batch.commit();
+  } catch (error) {
+    handleFirestoreError(error, OperationType.UPDATE, `${CLAIMS_COLLECTION}/${claim.id}`);
+  }
+}
+
+export async function rejectClaim(claimId: string): Promise<void> {
+  try {
+    await updateDoc(doc(db, CLAIMS_COLLECTION, claimId), {
+      status: 'rejected',
+      reviewedAt: new Date().toISOString(),
+    });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.UPDATE, `${CLAIMS_COLLECTION}/${claimId}`);
   }
 }
 
@@ -246,29 +364,6 @@ export async function updateOpportunityStatus(oppId: string, status: ApprovalSta
     await updateDoc(oppRef, { status });
   } catch (error) {
     handleFirestoreError(error, OperationType.UPDATE, `${OPPS_COLLECTION}/${oppId}`);
-  }
-}
-
-export async function loadSampleDataToFirestore(): Promise<{ orgsCount: number; oppsCount: number }> {
-  try {
-    let orgsCount = 0;
-    let oppsCount = 0;
-
-    for (const org of SAMPLE_ORGANIZATIONS) {
-      const docRef = doc(db, ORGS_COLLECTION, org.ownerUid);
-      await setDoc(docRef, org);
-      orgsCount++;
-    }
-
-    for (const opp of SAMPLE_OPPORTUNITIES) {
-      await addDoc(collection(db, OPPS_COLLECTION), opp);
-      oppsCount++;
-    }
-
-    return { orgsCount, oppsCount };
-  } catch (error) {
-    handleFirestoreError(error, OperationType.WRITE, 'sample_data_loader');
-    throw error;
   }
 }
 

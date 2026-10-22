@@ -1,6 +1,8 @@
 import React from 'react';
 import { Organization } from '../types';
-import { SampleDataBadge, LocationBadge } from './Badges';
+import { LocationBadge, TeamManagedBadge } from './Badges';
+import { useLanguage } from '../context/LanguageContext';
+import { placeTypeLabel, facilityLabel, isTeamManaged } from '../lib/places';
 import { OrgLogo, OrgPicture } from './OrgVisuals';
 import { MapPin, Zap, Wifi, ArrowRight, ShieldCheck } from 'lucide-react';
 
@@ -15,6 +17,7 @@ export const OrganizationCard: React.FC<OrganizationCardProps> = ({
   onSelect,
   opportunityCount,
 }) => {
+  const { t } = useLanguage();
   return (
     <div
       onClick={() => onSelect(organization)}
@@ -27,10 +30,10 @@ export const OrganizationCard: React.FC<OrganizationCardProps> = ({
           {/* Top badges floating over image */}
           <div className="absolute top-2 left-2 flex flex-wrap items-center gap-1">
             <span className="text-[11px] font-bold px-2 py-0.5 rounded-sm bg-[#16402E] text-white border border-[#16402E]">
-              {organization.type}
+              {placeTypeLabel(organization.type, t)}
             </span>
             <LocationBadge item={organization} />
-            {organization.isSample && <SampleDataBadge />}
+            {isTeamManaged(organization) && <TeamManagedBadge />}
           </div>
         </div>
 
@@ -58,11 +61,11 @@ export const OrganizationCard: React.FC<OrganizationCardProps> = ({
           <div className="grid grid-cols-2 gap-1.5 text-[11px] mb-3">
             <div className="flex items-center gap-1 bg-[#F8F5EE] border border-[#E2DDD5] px-2 py-1 rounded-sm text-[#1C211E]">
               <Zap size={12} className="text-[#D95D39] shrink-0" />
-              <span className="truncate">{organization.powerReliability}</span>
+              <span className="truncate">{t.powerNames[organization.powerReliability || 'Unknown'] || organization.powerReliability}</span>
             </div>
             <div className="flex items-center gap-1 bg-[#F8F5EE] border border-[#E2DDD5] px-2 py-1 rounded-sm text-[#1C211E]">
               <Wifi size={12} className="text-[#16402E] shrink-0" />
-              <span className="truncate">{organization.internetReliability} internet</span>
+              <span className="truncate">{t.internetLabel}: {t.internetNames[organization.internetReliability || 'Unknown'] || organization.internetReliability}</span>
             </div>
           </div>
 
@@ -73,7 +76,7 @@ export const OrganizationCard: React.FC<OrganizationCardProps> = ({
                 key={idx}
                 className="text-[10px] bg-[#EFE9DC] text-[#445048] px-1.5 py-0.5 rounded-sm"
               >
-                {fac}
+                {facilityLabel(fac, t)}
               </span>
             ))}
             {organization.facilities && organization.facilities.length > 3 && (

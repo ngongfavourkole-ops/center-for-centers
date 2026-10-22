@@ -2,6 +2,15 @@ import React, { useState } from 'react';
 import { Opportunity, Organization, NavFilters } from '../types';
 import { useLanguage } from '../context/LanguageContext';
 import { CAMEROON_REGIONS } from '../lib/regions';
+import { PLACE_TYPES, placeTypeLabel } from '../lib/places';
+import { placeTypeIcon } from '../components/OrgVisuals';
+
+const EmptyState: React.FC<{ title: string; description: string }> = ({ title, description }) => (
+  <div className="bg-white border-2 border-dashed border-[#E2DDD5] p-6 text-center rounded-sm">
+    <p className="font-heading font-bold text-base text-[#1C211E]">{title}</p>
+    <p className="text-xs text-[#555E57] mt-1 max-w-sm mx-auto">{description}</p>
+  </div>
+);
 import { OpportunityCard } from '../components/OpportunityCard';
 import { OrganizationCard } from '../components/OrganizationCard';
 import { ContourMotifBackground } from '../components/Logo';
@@ -201,15 +210,19 @@ export const HomeView: React.FC<HomeViewProps> = ({
             </button>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {freeOpportunities.map(opp => (
-              <OpportunityCard
-                key={opp.id}
-                opportunity={opp}
-                onSelect={onSelectOpportunity}
-              />
-            ))}
-          </div>
+          {freeOpportunities.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {freeOpportunities.map(opp => (
+                <OpportunityCard
+                  key={opp.id}
+                  opportunity={opp}
+                  onSelect={onSelectOpportunity}
+                />
+              ))}
+            </div>
+          ) : (
+            <EmptyState title={t.noOpportunitiesYet} description={t.noOpportunitiesYetDesc} />
+          )}
         </section>
 
         <section className="bg-[#EFE9DC] border-2 border-[#16402E] p-6 sm:p-8 rounded-sm">
@@ -236,16 +249,42 @@ export const HomeView: React.FC<HomeViewProps> = ({
             </button>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-6">
-            {featuredOrgs.map(org => (
-              <OrganizationCard
-                key={org.id}
-                organization={org}
-                onSelect={onSelectOrganization}
-                opportunityCount={opportunities.filter(o => o.orgId === org.id || o.orgId === org.ownerUid).length}
-              />
-            ))}
-          </div>
+          <nav aria-label={t.browseByType} className="mt-5">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-[#16402E] mb-2">{t.browseByType}</p>
+            <ul className="flex flex-wrap gap-1.5">
+              {PLACE_TYPES.filter(type => type !== 'Other').map(type => {
+                const Icon = placeTypeIcon(type);
+                return (
+                  <li key={type}>
+                    <button
+                      onClick={() => onNavigateTab('organizations', { placeType: type })}
+                      className="px-2.5 py-1.5 bg-white hover:bg-[#16402E] hover:text-white text-[#16402E] rounded-sm border border-[#16402E]/30 text-xs font-semibold transition-colors inline-flex items-center gap-1.5"
+                    >
+                      <Icon size={13} aria-hidden="true" />
+                      <span>{placeTypeLabel(type, t)}</span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </nav>
+
+          {featuredOrgs.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-6">
+              {featuredOrgs.map(org => (
+                <OrganizationCard
+                  key={org.id}
+                  organization={org}
+                  onSelect={onSelectOrganization}
+                  opportunityCount={opportunities.filter(o => o.orgId === org.id || o.orgId === org.ownerUid).length}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="mt-6">
+              <EmptyState title={t.noPlacesYet} description={t.noPlacesYetDesc} />
+            </div>
+          )}
         </section>
       </div>
     </div>

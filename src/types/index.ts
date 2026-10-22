@@ -1,10 +1,26 @@
-export type OrgType = 
-  | 'Learning center' 
-  | 'Training provider' 
-  | 'NGO' 
-  | 'Technology hub' 
-  | 'Educational institution' 
+// Kinds of places. Stored in English; labels are translated in the UI.
+export type OrgType =
+  | 'Learning center'
+  | 'Cyber cafe'
+  | 'Computer lab'
+  | 'Study space'
+  | 'Internet access point'
+  | 'Charging point'
+  | 'Club'
+  | 'Affordable store'
+  | 'Technology hub'
+  | 'NGO'
+  | 'Training provider'
+  | 'Educational institution'
   | 'Other';
+
+export type SocialNetwork = 'facebook' | 'instagram' | 'tiktok' | 'x' | 'youtube' | 'whatsapp';
+
+// Each value is a full link or a username; WhatsApp is a phone number.
+export type SocialLinks = Partial<Record<SocialNetwork, string>>;
+
+// 'team' = added by admins from public information until the real owner claims it.
+export type ManagedBy = 'owner' | 'team';
 
 // Cameroon's 10 regions. Stored in English; labels are translated in the UI.
 export type CameroonRegion =
@@ -56,6 +72,7 @@ export type ApprovalStatus = 'pending' | 'approved' | 'rejected';
 export interface NavFilters {
   category?: string;
   region?: string;
+  placeType?: string;
   cost?: 'free' | 'paid';
   query?: string;
 }
@@ -70,18 +87,23 @@ export interface Organization {
   contactPhone: string;
   contactEmail: string;
   website: string;
+  socialLinks?: SocialLinks;
   description: string;
   facilities: string[];
-  studentAccess: string;
-  fees: string;
-  openingHours: string;
+  studentAccess: string; // Empty means unknown
+  fees: string; // Empty means unknown
+  openingHours: string; // Empty means unknown
   powerReliability: PowerReliability;
   internetReliability: InternetReliability;
-  bookingRequired: boolean;
+  bookingRequired: boolean | null; // null means unknown
   lastConfirmed: string;
   status: ApprovalStatus;
-  isSample: boolean;
-  ownerUid: string;
+  isSample: boolean; // Legacy demo records; never shown publicly
+  ownerUid: string; // Empty for team-managed places nobody has claimed yet
+  managedBy?: ManagedBy; // Missing on older records, which were all owner-managed
+  sourceNote?: string; // Where the team got the details (team-managed places)
+  addedBy?: string; // Admin uid that added a team-managed place
+  claimedAt?: string;
   createdAt: string;
   logoUrl?: string;
   imageUrl?: string;
@@ -145,7 +167,11 @@ export interface Claim {
   orgName: string;
   claimantUid: string;
   claimantEmail: string;
+  claimantName: string;
+  relationship: string;
+  phone: string;
   verificationDetails: string;
   status: 'pending' | 'approved' | 'rejected';
   createdAt: string;
+  reviewedAt?: string;
 }

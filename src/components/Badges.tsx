@@ -21,11 +21,24 @@ export const ClosingSoonBadge: React.FC<{ daysLeft: number; className?: string }
   </span>
 );
 
-export const SampleDataBadge: React.FC<{ className?: string }> = ({ className = '' }) => (
-  <span className={`inline-flex items-center text-[10px] font-bold tracking-wider uppercase px-2 py-0.5 rounded-sm bg-[#EFE9DC] text-[#6E4215] border border-[#D5C2A5] ${className}`} title="Demonstration record">
-    Sample data
-  </span>
-);
+// Admin only: marks old demo records that are hidden from the public.
+export const SampleDataBadge: React.FC<{ className?: string }> = ({ className = '' }) => {
+  const { t } = useLanguage();
+  return (
+    <span className={`inline-flex items-center text-[10px] font-bold tracking-wider uppercase px-2 py-0.5 rounded-sm bg-[#EFE9DC] text-[#6E4215] border border-[#D5C2A5] ${className}`}>
+      {t.sampleRecord}
+    </span>
+  );
+};
+
+export const TeamManagedBadge: React.FC<{ className?: string }> = ({ className = '' }) => {
+  const { t } = useLanguage();
+  return (
+    <span className={`inline-flex items-center text-[11px] font-bold px-2 py-0.5 rounded-sm bg-[#FBECE7] text-[#8F3A20] border border-[#D95D39]/40 ${className}`}>
+      {t.teamManaged}
+    </span>
+  );
+};
 
 export const StatusBadge: React.FC<{ status: ApprovalStatus; className?: string }> = ({ status, className = '' }) => {
   switch (status) {

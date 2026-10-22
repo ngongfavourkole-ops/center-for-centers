@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Opportunity } from '../types';
-import { FreeBadge, PaidBadge, ClosingSoonBadge, SampleDataBadge, CategoryBadge, LocationBadge } from './Badges';
+import { FreeBadge, PaidBadge, ClosingSoonBadge, CategoryBadge, LocationBadge } from './Badges';
 import { Calendar, Building2, ArrowRight, Image as ImageIcon } from 'lucide-react';
 
 interface OpportunityCardProps {
@@ -56,7 +56,6 @@ export const OpportunityCard: React.FC<OpportunityCardProps> = ({ opportunity, o
             <CategoryBadge category={opportunity.category} />
             <LocationBadge item={opportunity} />
             {isClosingSoon && <ClosingSoonBadge daysLeft={daysLeft} />}
-            {opportunity.isSample && <SampleDataBadge />}
           </div>
 
           <h3 className="font-heading font-bold text-base sm:text-lg text-[#1C211E] group-hover:text-[#16402E] leading-snug line-clamp-2">

@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { Opportunity, Organization } from '../types';
-import { FreeBadge, PaidBadge, ClosingSoonBadge, SampleDataBadge, CategoryBadge, LocationBadge } from '../components/Badges';
+import { FreeBadge, PaidBadge, ClosingSoonBadge, CategoryBadge, LocationBadge } from '../components/Badges';
 import { ShareButton } from '../components/ShareButton';
 import { ReportModal } from '../components/ReportModal';
 import { OrgLogo } from '../components/OrgVisuals';
 import { EventFlyerSection } from '../components/EventVisuals';
 import { useLanguage } from '../context/LanguageContext';
 import { formatLocation } from '../lib/regions';
+import { placeTypeLabel } from '../lib/places';
 import { ArrowLeft, ExternalLink, Calendar, MapPin, Building2, AlertTriangle, UserCheck, CheckCircle2 } from 'lucide-react';
 
 interface OpportunityDetailViewProps {
@@ -80,7 +81,6 @@ export const OpportunityDetailView: React.FC<OpportunityDetailViewProps> = ({
           <CategoryBadge category={opportunity.category} />
           <LocationBadge item={opportunity} />
           {isClosingSoon && <ClosingSoonBadge daysLeft={daysLeft} />}
-          {opportunity.isSample && <SampleDataBadge />}
         </div>
 
         <div>
@@ -235,7 +235,7 @@ export const OpportunityDetailView: React.FC<OpportunityDetailViewProps> = ({
                 <div>
                   <div className="flex items-center gap-1.5 mb-1">
                     <span className="text-xs font-bold text-[#16402E] bg-[#E8EFEA] px-2 py-0.5 rounded-sm">
-                      {organization.type}
+                      {placeTypeLabel(organization.type, t)}
                     </span>
                     <span className="text-xs text-[#555E57]">{formatLocation(organization, t)}</span>
                   </div>

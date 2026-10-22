@@ -1,20 +1,27 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { User } from 'firebase/auth';
 import { Organization, Opportunity } from '../types';
 import { RealAccessPanel } from '../components/RealAccessPanel';
 import { OpportunityCard } from '../components/OpportunityCard';
-import { SampleDataBadge, LocationBadge } from '../components/Badges';
+import { LocationBadge, TeamManagedBadge } from '../components/Badges';
+import { SocialLinks } from '../components/SocialLinks';
+import { ClaimPlaceModal } from '../components/ClaimPlaceModal';
+import { fetchMyClaims } from '../lib/firestoreService';
+import { placeTypeLabel, isTeamManaged } from '../lib/places';
 import { ShareButton } from '../components/ShareButton';
 import { ReportModal } from '../components/ReportModal';
 import { OrgLogo, OrgPicture } from '../components/OrgVisuals';
 import { useLanguage } from '../context/LanguageContext';
 import { formatLocation } from '../lib/regions';
-import { ArrowLeft, MapPin, Phone, Mail, Globe, AlertTriangle, Building2, Sparkles, Camera } from 'lucide-react';
+import { ArrowLeft, MapPin, Phone, Mail, AlertTriangle, Building2, Sparkles, BadgeCheck, Info } from 'lucide-react';
 
 interface OrganizationProfileViewProps {
   organization: Organization;
   opportunities: Opportunity[];
   onBack: () => void;
   onSelectOpportunity: (opp: Opportunity) => void;
+  user: User | null;
+  onSignIn: () => void;
 }
 
 export const OrganizationProfileView: React.FC<OrganizationProfileViewProps> = ({
@@ -22,9 +29,33 @@ export const OrganizationProfileView: React.FC<OrganizationProfileViewProps> = (
   opportunities,
   onBack,
   onSelectOpportunity,
+  user,
+  onSignIn,
 }) => {
   const { t } = useLanguage();
   const [showReportModal, setShowReportModal] = useState(false);
+  const [showClaimModal, setShowClaimModal] = useState(false);
+  const [claimPending, setClaimPending] = useState(false);
+  const teamManaged = isTeamManaged(organization);
+
+  // Show "waiting for review" instead of the claim button if this user already claimed it
+  useEffect(() => {
+    if (!user || !teamManaged) {
+      setClaimPending(false);
+      return;
+    }
+    let cancelled = false;
+    fetchMyClaims(user.uid)
+      .then(claims => {
+        if (!cancelled) {
+          setClaimPending(claims.some(c => c.orgId === organization.id && c.status === 'pending'));
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [user, organization.id, teamManaged]);
 
   const orgOpportunities = opportunities.filter(
     opp => (opp.orgId === organization.id || opp.orgId === organization.ownerUid) && opp.status === 'approved'
@@ -69,14 +100,10 @@ export const OrganizationProfileView: React.FC<OrganizationProfileViewProps> = (
           />
           <div className="absolute top-3 left-3 flex flex-wrap items-center gap-1.5">
             <span className="text-xs font-bold px-2.5 py-0.5 rounded-sm bg-[#16402E] text-white border border-[#16402E]">
-              {organization.type}
+              {placeTypeLabel(organization.type, t)}
             </span>
             <LocationBadge item={organization} />
-            {organization.isSample && <SampleDataBadge />}
-          </div>
-          <div className="absolute bottom-2 right-2 bg-[#16402E]/85 text-white text-[10px] px-2 py-0.5 rounded-sm font-semibold flex items-center gap-1">
-            <Camera size={11} />
-            <span>Verified Facility</span>
+            {teamManaged && <TeamManagedBadge />}
           </div>
         </div>
 
@@ -118,20 +145,42 @@ export const OrganizationProfileView: React.FC<OrganizationProfileViewProps> = (
                 <span>{organization.contactEmail}</span>
               </a>
             )}
-            {organization.website && (
-              <a
-                href={organization.website}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 bg-[#F8F5EE] border border-[#E2DDD5] px-3 py-1.5 rounded-sm font-semibold text-[#16402E] hover:border-[#16402E]"
-              >
-                <Globe size={13} className="text-[#D95D39]" />
-                <span>Visit Website</span>
-              </a>
-            )}
           </div>
+
+          <SocialLinks organization={organization} />
         </div>
       </div>
+
+      {teamManaged && (
+        <section className="bg-[#FBECE7] border-2 border-[#D95D39]/40 rounded-sm p-4 sm:p-5 space-y-3">
+          <div className="flex items-start gap-2">
+            <Info size={18} aria-hidden="true" className="text-[#8F3A20] shrink-0 mt-0.5" />
+            <div className="space-y-1 min-w-0">
+              <p className="font-bold text-sm text-[#1C211E]">{t.teamManaged}</p>
+              <p className="text-xs text-[#445048]">{t.teamManagedDesc}</p>
+              {organization.sourceNote && (
+                <p className="text-xs text-[#445048] break-words">
+                  <span className="font-bold">{t.sourceLabel}: </span>
+                  {organization.sourceNote}
+                </p>
+              )}
+            </div>
+          </div>
+          {claimPending ? (
+            <p className="text-xs font-semibold text-[#16402E] bg-white border border-[#BACCC0] rounded-sm px-3 py-2">
+              {t.claimPending}
+            </p>
+          ) : (
+            <button
+              onClick={() => setShowClaimModal(true)}
+              className="px-4 py-2 bg-[#16402E] hover:bg-[#0F2D20] text-white text-xs font-bold rounded-sm border border-[#0F2D20] inline-flex items-center gap-1.5"
+            >
+              <BadgeCheck size={14} aria-hidden="true" />
+              <span>{t.claimThisPlace}</span>
+            </button>
+          )}
+        </section>
+      )}
 
       <section className="space-y-2">
         <RealAccessPanel organization={organization} />
@@ -178,6 +227,17 @@ export const OrganizationProfileView: React.FC<OrganizationProfileViewProps> = (
         targetId={organization.id}
         targetTitle={organization.name}
       />
+
+      {teamManaged && (
+        <ClaimPlaceModal
+          isOpen={showClaimModal}
+          onClose={() => setShowClaimModal(false)}
+          organization={organization}
+          user={user}
+          onSignIn={onSignIn}
+          onClaimSent={() => setClaimPending(true)}
+        />
+      )}
     </div>
   );
 };

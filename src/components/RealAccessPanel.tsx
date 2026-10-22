@@ -1,5 +1,7 @@
 import React from 'react';
 import { Organization } from '../types';
+import { useLanguage } from '../context/LanguageContext';
+import { facilityLabel } from '../lib/places';
 import { Zap, Wifi, Clock, CalendarCheck, Users, Banknote, ShieldAlert } from 'lucide-react';
 
 interface RealAccessPanelProps {
@@ -8,6 +10,7 @@ interface RealAccessPanelProps {
 }
 
 export const RealAccessPanel: React.FC<RealAccessPanelProps> = ({ organization, className = '' }) => {
+  const { t } = useLanguage();
   const getPowerColor = (status: string) => {
     switch (status) {
       case 'Backup power available':
@@ -55,7 +58,7 @@ export const RealAccessPanel: React.FC<RealAccessPanelProps> = ({ organization, 
             <span>Who may use it:</span>
           </div>
           <div className="text-[#2C332E] leading-relaxed flex-1">
-            {organization.studentAccess || 'Open to all students and youths.'}
+            {organization.studentAccess || t.unknown}
           </div>
         </div>
 
@@ -65,7 +68,7 @@ export const RealAccessPanel: React.FC<RealAccessPanelProps> = ({ organization, 
             <span>Fees & Costs:</span>
           </div>
           <div className="text-[#2C332E] leading-relaxed flex-1 font-medium">
-            {organization.fees || 'Free of charge.'}
+            {organization.fees || t.unknown}
           </div>
         </div>
 
@@ -77,7 +80,7 @@ export const RealAccessPanel: React.FC<RealAccessPanelProps> = ({ organization, 
             </div>
             <div className="flex items-center gap-2">
               <span className={`inline-block text-xs font-bold px-2.5 py-1 rounded-sm ${getPowerColor(organization.powerReliability)}`}>
-                {organization.powerReliability || 'Unknown'}
+                {t.powerNames[organization.powerReliability || 'Unknown'] || organization.powerReliability}
               </span>
               {organization.powerReliability === 'Backup power available' && (
                 <span className="text-[12px] text-[#445048]">Generator or Solar inverter on site</span>
@@ -92,7 +95,7 @@ export const RealAccessPanel: React.FC<RealAccessPanelProps> = ({ organization, 
             </div>
             <div className="flex items-center gap-2">
               <span className={`inline-block text-xs font-bold px-2.5 py-1 rounded-sm ${getInternetColor(organization.internetReliability)}`}>
-                {organization.internetReliability || 'Unknown'}
+                {t.internetNames[organization.internetReliability || 'Unknown'] || organization.internetReliability}
               </span>
               {organization.internetReliability === 'Stable' && (
                 <span className="text-[12px] text-[#445048]">Fiber or high-speed broadband</span>
@@ -110,11 +113,11 @@ export const RealAccessPanel: React.FC<RealAccessPanelProps> = ({ organization, 
                   key={idx}
                   className="bg-[#EFE9DC] text-[#1C211E] text-xs font-medium px-2 py-0.5 rounded-sm border border-[#DDD6C8]"
                 >
-                  {fac}
+                  {facilityLabel(fac, t)}
                 </span>
               ))
             ) : (
-              <span className="text-[#777E79] italic text-xs">No facilities specified</span>
+              <span className="text-[#555E57] text-xs">{t.unknown}</span>
             )}
           </div>
         </div>
@@ -124,7 +127,7 @@ export const RealAccessPanel: React.FC<RealAccessPanelProps> = ({ organization, 
             <Clock size={16} className="text-[#16402E] shrink-0 mt-0.5" />
             <div>
               <div className="font-bold text-[#1C211E] text-xs uppercase tracking-wider">Opening Hours</div>
-              <div className="text-[#2C332E] mt-0.5 font-medium">{organization.openingHours || 'Contact center'}</div>
+              <div className="text-[#2C332E] mt-0.5 font-medium">{organization.openingHours || t.unknown}</div>
             </div>
           </div>
 
@@ -133,13 +136,17 @@ export const RealAccessPanel: React.FC<RealAccessPanelProps> = ({ organization, 
             <div>
               <div className="font-bold text-[#1C211E] text-xs uppercase tracking-wider">Booking Condition</div>
               <div className="mt-0.5">
-                {organization.bookingRequired ? (
+                {organization.bookingRequired === true ? (
                   <span className="text-xs font-bold text-[#A51D24] bg-[#FCE8E6] border border-[#F5C2C7] px-2 py-0.5 rounded-sm">
-                    Advance booking required
+                    {t.bookingRequiredOption}
+                  </span>
+                ) : organization.bookingRequired === false ? (
+                  <span className="text-xs font-bold text-[#16402E] bg-[#E8EFEA] border border-[#BACCC0] px-2 py-0.5 rounded-sm">
+                    {t.bookingNotRequiredOption}
                   </span>
                 ) : (
-                  <span className="text-xs font-bold text-[#16402E] bg-[#E8EFEA] border border-[#BACCC0] px-2 py-0.5 rounded-sm">
-                    Walk-ins welcome (no booking needed)
+                  <span className="text-xs font-bold text-[#555E57] bg-[#EAE4D7] px-2 py-0.5 rounded-sm">
+                    {t.unknown}
                   </span>
                 )}
               </div>
@@ -153,7 +160,7 @@ export const RealAccessPanel: React.FC<RealAccessPanelProps> = ({ organization, 
             <span>Information verified by Center for Centers team</span>
           </div>
           <span className="font-semibold text-[#1C211E]">
-            Last confirmed: {organization.lastConfirmed || 'Recently verified'}
+            Last confirmed: {organization.lastConfirmed || t.unknown}
           </span>
         </div>
       </div>

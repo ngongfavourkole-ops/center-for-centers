@@ -1,18 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { User } from 'firebase/auth';
-import { Organization, Opportunity, Report, ApprovalStatus } from '../types';
+import { Organization, Opportunity, Report, ApprovalStatus, Claim } from '../types';
 import {
   fetchAllOrganizationsForAdmin,
   fetchAllOpportunitiesForAdmin,
   updateOrganizationStatus,
   updateOpportunityStatus,
-  loadSampleDataToFirestore,
+  fetchClaimsForAdmin,
+  approveClaim,
+  rejectClaim,
+  adminDeletePlace,
   fetchReportsForAdmin,
 } from '../lib/firestoreService';
-import { StatusBadge, SampleDataBadge, FreeBadge, PaidBadge } from '../components/Badges';
+import { StatusBadge, SampleDataBadge, FreeBadge, PaidBadge, TeamManagedBadge } from '../components/Badges';
+import { AdminPlaceEditor } from '../components/AdminPlaceEditor';
+import { placeTypeLabel, isTeamManaged } from '../lib/places';
 import { useLanguage } from '../context/LanguageContext';
 import { formatLocation } from '../lib/regions';
-import { ShieldCheck, Check, X, Database, AlertCircle, RefreshCw, EyeOff, FileText, Building2, Sparkles, MessageSquare } from 'lucide-react';
+import { ShieldCheck, Check, X, AlertCircle, RefreshCw, EyeOff, FileText, Building2, Sparkles, MessageSquare, Plus, Edit3, Trash2, BadgeCheck } from 'lucide-react';
 
 interface AdminViewProps {
   user: User;
@@ -21,9 +26,10 @@ interface AdminViewProps {
 
 export const AdminView: React.FC<AdminViewProps> = ({ user, onRefreshData }) => {
   const { t } = useLanguage();
-  const [activeTab, setActiveTab] = useState<'pending' | 'all-orgs' | 'all-opps' | 'reports'>('pending');
+  const [activeTab, setActiveTab] = useState<'pending' | 'add-place' | 'claims' | 'all-orgs' | 'all-opps' | 'reports'>('pending');
+  const [editingPlace, setEditingPlace] = useState<Organization | null>(null);
+  const [claims, setClaims] = useState<Claim[]>([]);
   const [loading, setLoading] = useState(true);
-  const [loadingSample, setLoadingSample] = useState(false);
   const [statusActionLoading, setStatusActionLoading] = useState<string | null>(null);
   const [notice, setNotice] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
 
@@ -38,14 +44,16 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, onRefreshData }) => 
   const loadAdminData = async () => {
     setLoading(true);
     try {
-      const [orgs, opps, reps] = await Promise.all([
+      const [orgs, opps, reps, cls] = await Promise.all([
         fetchAllOrganizationsForAdmin(),
         fetchAllOpportunitiesForAdmin(),
         fetchReportsForAdmin(),
+        fetchClaimsForAdmin(),
       ]);
       setAllOrgs(orgs);
       setAllOpps(opps);
       setReports(reps);
+      setClaims(cls.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || '')));
     } catch {
       setNotice({ type: 'error', msg: 'Failed to retrieve admin records.' });
     } finally {
@@ -55,6 +63,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, onRefreshData }) => 
 
   const pendingOrgs = allOrgs.filter(o => o.status === 'pending');
   const pendingOpps = allOpps.filter(o => o.status === 'pending');
+  const pendingClaims = claims.filter(c => c.status === 'pending');
 
   const handleUpdateOrgStatus = async (orgId: string, newStatus: ApprovalStatus) => {
     setStatusActionLoading(orgId);
@@ -84,23 +93,44 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, onRefreshData }) => 
     }
   };
 
-  const handleLoadSampleData = async () => {
-    if (!window.confirm('Populate database with 8 Cameroon organizations and 15 realistic youth opportunities?')) {
-      return;
-    }
-    setLoadingSample(true);
+  const handlePlaceSaved = async (message: string) => {
+    setNotice({ type: 'success', msg: message });
+    setEditingPlace(null);
+    await loadAdminData();
+    await onRefreshData();
+  };
+
+  const handleDeletePlace = async (org: Organization) => {
+    if (!window.confirm(t.deletePlaceConfirm.replace('{name}', org.name))) return;
+    setStatusActionLoading(org.id);
     try {
-      const result = await loadSampleDataToFirestore();
-      setNotice({
-        type: 'success',
-        msg: `Loaded ${result.orgsCount} sample organizations and ${result.oppsCount} opportunities successfully!`,
-      });
+      await adminDeletePlace(org.id);
+      setNotice({ type: 'success', msg: t.placeDeleted });
       await loadAdminData();
       await onRefreshData();
     } catch {
-      setNotice({ type: 'error', msg: 'Failed to load sample data. Check Firestore rules and connection.' });
+      setNotice({ type: 'error', msg: t.deleteError });
     } finally {
-      setLoadingSample(false);
+      setStatusActionLoading(null);
+    }
+  };
+
+  const handleReviewClaim = async (claim: Claim, approve: boolean) => {
+    if (!claim.id) return;
+    setStatusActionLoading(claim.id);
+    try {
+      if (approve) {
+        await approveClaim(claim);
+      } else {
+        await rejectClaim(claim.id);
+      }
+      setNotice({ type: 'success', msg: approve ? t.claimApproved : t.claimRejected });
+      await loadAdminData();
+      await onRefreshData();
+    } catch {
+      setNotice({ type: 'error', msg: t.claimReviewError });
+    } finally {
+      setStatusActionLoading(null);
     }
   };
 
@@ -122,13 +152,14 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, onRefreshData }) => 
 
         <div className="flex flex-wrap items-center gap-2">
           <button
-            onClick={handleLoadSampleData}
-            disabled={loadingSample}
+            onClick={() => {
+              setEditingPlace(null);
+              setActiveTab('add-place');
+            }}
             className="px-4 py-2.5 bg-[#D95D39] hover:bg-[#B84725] text-white text-xs font-bold rounded-sm border border-[#B84725] flex items-center gap-2 transition-colors shrink-0"
-            title="Adds 8 Cameroon organizations and 15 opportunities into Firestore"
           >
-            <Database size={15} />
-            <span>{loadingSample ? 'Loading sample data...' : 'Load sample data'}</span>
+            <Plus size={15} aria-hidden="true" />
+            <span>{t.adminAddPlace}</span>
           </button>
 
           <button
@@ -174,6 +205,35 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, onRefreshData }) => 
               {pendingOrgs.length + pendingOpps.length}
             </span>
           )}
+        </button>
+
+        <button
+          onClick={() => setActiveTab('claims')}
+          className={`px-4 py-2 text-xs font-bold uppercase tracking-wider border-t-2 border-x-2 rounded-t-sm flex items-center gap-1.5 transition-colors ${
+            activeTab === 'claims'
+              ? 'bg-[#16402E] text-white border-[#16402E]'
+              : 'bg-white text-[#555E57] border-[#E2DDD5] hover:text-[#1C211E]'
+          }`}
+        >
+          <span>{t.claimsTab}</span>
+          {pendingClaims.length > 0 && (
+            <span className="bg-[#D95D39] text-white text-[10px] px-1.5 rounded-sm font-bold">{pendingClaims.length}</span>
+          )}
+        </button>
+
+        <button
+          onClick={() => {
+            setEditingPlace(null);
+            setActiveTab('add-place');
+          }}
+          className={`px-4 py-2 text-xs font-bold uppercase tracking-wider border-t-2 border-x-2 rounded-t-sm flex items-center gap-1.5 transition-colors ${
+            activeTab === 'add-place'
+              ? 'bg-[#16402E] text-white border-[#16402E]'
+              : 'bg-white text-[#555E57] border-[#E2DDD5] hover:text-[#1C211E]'
+          }`}
+        >
+          <Plus size={13} aria-hidden="true" />
+          <span>{t.adminAddPlace}</span>
         </button>
 
         <button
@@ -232,7 +292,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, onRefreshData }) => 
                       <div>
                         <div className="flex items-center gap-2 mb-1">
                           <StatusBadge status={org.status} />
-                          <span className="text-xs font-bold text-[#16402E]">{org.type}</span>
+                          <span className="text-xs font-bold text-[#16402E]">{placeTypeLabel(org.type, t)}</span>
                           <span className="text-xs text-[#555E57]">• {formatLocation(org, t)}</span>
                         </div>
                         <h3 className="font-heading font-bold text-base text-[#1C211E]">{org.name}</h3>
@@ -394,8 +454,83 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, onRefreshData }) => 
             )}
           </section>
         </div>
+      ) : activeTab === 'add-place' ? (
+        <AdminPlaceEditor
+          key="new-place"
+          user={user}
+          existing={null}
+          onSaved={handlePlaceSaved}
+        />
+      ) : activeTab === 'claims' ? (
+        <div className="space-y-3">
+          {claims.length > 0 ? (
+            claims.map(claim => (
+              <div key={claim.id} className="bg-white border-2 border-[#16402E]/20 p-4 rounded-sm space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                  <div className="min-w-0 space-y-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <StatusBadge status={claim.status} />
+                      <span className="text-[11px] text-[#555E57]">{claim.createdAt?.split('T')[0]}</span>
+                    </div>
+                    <h3 className="font-heading font-bold text-base text-[#1C211E] break-words">{claim.orgName}</h3>
+                    <p className="text-xs text-[#445048] break-words">
+                      <span className="font-bold">{t.claimedBy}: </span>
+                      {claim.claimantName ? `${claim.claimantName} (${claim.claimantEmail})` : claim.claimantEmail}
+                    </p>
+                  </div>
+                  {claim.status === 'pending' && (
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        onClick={() => handleReviewClaim(claim, true)}
+                        disabled={statusActionLoading === claim.id}
+                        className="px-3.5 py-1.5 bg-[#16402E] hover:bg-[#0F2D20] text-white text-xs font-bold rounded-sm flex items-center gap-1.5"
+                      >
+                        <BadgeCheck size={14} aria-hidden="true" />
+                        <span>{t.approveClaim}</span>
+                      </button>
+                      <button
+                        onClick={() => handleReviewClaim(claim, false)}
+                        disabled={statusActionLoading === claim.id}
+                        className="px-3.5 py-1.5 bg-[#FCE8E6] text-[#A51D24] border border-[#F5C2C7] hover:bg-[#F8D7DA] text-xs font-bold rounded-sm flex items-center gap-1.5"
+                      >
+                        <X size={14} aria-hidden="true" />
+                        <span>{t.rejectClaim}</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+                <dl className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs bg-[#FBF9F5] p-3 rounded-sm border border-[#E2DDD5]">
+                  <div>
+                    <dt className="font-bold text-[#1C211E]">{t.claimRoleShort}</dt>
+                    <dd className="break-words">{claim.relationship}</dd>
+                  </div>
+                  <div>
+                    <dt className="font-bold text-[#1C211E]">{t.claimPhoneShort}</dt>
+                    <dd className="break-words">{claim.phone}</dd>
+                  </div>
+                  <div className="sm:col-span-2">
+                    <dt className="font-bold text-[#1C211E]">{t.claimEvidenceShort}</dt>
+                    <dd className="break-words whitespace-pre-line">{claim.verificationDetails}</dd>
+                  </div>
+                </dl>
+              </div>
+            ))
+          ) : (
+            <p className="text-xs text-[#555E57] bg-white p-4 border border-[#E2DDD5] rounded-sm">{t.claimsEmpty}</p>
+          )}
+        </div>
       ) : activeTab === 'all-orgs' ? (
         <div className="space-y-3">
+          {editingPlace && (
+            <AdminPlaceEditor
+              key={editingPlace.id}
+              user={user}
+              existing={editingPlace}
+              onSaved={handlePlaceSaved}
+              onCancel={() => setEditingPlace(null)}
+            />
+          )}
+
           <div className="flex items-center justify-between">
             <span className="text-xs text-[#555E57] font-medium">
               Manage existing directory records. Unpublishing an approved center removes it from public view.
@@ -408,18 +543,29 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, onRefreshData }) => 
                 key={org.id}
                 className="bg-white border border-[#E2DDD5] p-4 rounded-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3"
               >
-                <div>
+                <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2 mb-1">
                     <StatusBadge status={org.status} />
                     {org.isSample && <SampleDataBadge />}
-                    <span className="text-xs font-bold text-[#16402E]">{org.type}</span>
+                    {isTeamManaged(org) && <TeamManagedBadge />}
+                    <span className="text-xs font-bold text-[#16402E]">{placeTypeLabel(org.type, t)}</span>
                     <span className="text-xs text-[#555E57]">• {formatLocation(org, t)}</span>
                   </div>
-                  <h3 className="font-heading font-bold text-base text-[#1C211E]">{org.name}</h3>
-                  <p className="text-xs text-[#555E57]">{org.address}</p>
+                  <h3 className="font-heading font-bold text-base text-[#1C211E] break-words">{org.name}</h3>
+                  <p className="text-xs text-[#555E57] break-words">{org.address}</p>
                 </div>
 
-                <div className="flex items-center gap-2 shrink-0">
+                <div className="flex flex-wrap items-center gap-2 shrink-0">
+                  <button
+                    onClick={() => {
+                      setEditingPlace(org);
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
+                    className="px-3 py-1.5 bg-white border border-[#16402E] text-[#16402E] hover:bg-[#F8F5EE] text-xs font-bold rounded-sm flex items-center gap-1"
+                  >
+                    <Edit3 size={13} aria-hidden="true" />
+                    <span>{t.editAction}</span>
+                  </button>
                   {org.status === 'approved' ? (
                     <button
                       onClick={() => handleUpdateOrgStatus(org.id, 'rejected')}
@@ -439,6 +585,14 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, onRefreshData }) => 
                       <span>Approve & Publish</span>
                     </button>
                   )}
+                  <button
+                    onClick={() => handleDeletePlace(org)}
+                    disabled={statusActionLoading === org.id}
+                    className="px-3 py-1.5 bg-[#FCE8E6] border border-[#F5C2C7] text-[#A51D24] hover:bg-[#F8D7DA] text-xs font-bold rounded-sm flex items-center gap-1"
+                  >
+                    <Trash2 size={13} aria-hidden="true" />
+                    <span>{t.deleteAction}</span>
+                  </button>
                 </div>
               </div>
             ))}

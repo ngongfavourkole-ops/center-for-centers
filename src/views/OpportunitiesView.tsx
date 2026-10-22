@@ -268,10 +268,10 @@ export const OpportunitiesView: React.FC<OpportunitiesViewProps> = ({
         ) : (
           <div className="bg-white border-2 border-dashed border-[#E2DDD5] p-8 text-center rounded-sm">
             <p className="font-heading font-bold text-base text-[#1C211E] mb-1">
-              No matching opportunities found
+              {opportunities.length === 0 ? t.noOpportunitiesYet : "No matching opportunities found"}
             </p>
             <p className="text-xs text-[#555E57] max-w-sm mx-auto mb-4">
-              Try adjusting your filters, selecting a different town, or resetting the search query.
+              {opportunities.length === 0 ? t.noOpportunitiesYetDesc : "Try adjusting your filters, selecting a different town, or resetting the search query."}
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-2">
               {hasActiveFilters && (
