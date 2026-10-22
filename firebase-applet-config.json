@@ -1,12 +1,10 @@
 {
-  "projectId": "original-discovery-p5v9p",
-  "appId": "1:1079674352587:web:dd5099b399325bd03f3c4e",
-  "apiKey": "AIzaSyDyPC70QjBwNxjnTvwgFFZEQIQJnxVHeWQ",
-  "authDomain": "original-discovery-p5v9p.firebaseapp.com",
-  "firestoreDatabaseId": "ai-studio-2af1b6e9-8ab9-417f-8be0-506ffa2f00ad",
-  "storageBucket": "original-discovery-p5v9p.firebasestorage.app",
-  "messagingSenderId": "1079674352587",
-  "measurementId": "",
-  "oAuthClientId": "1079674352587-ce6jmun6j1kt8crp0d2th1r0ulnjbmm6.apps.googleusercontent.com",
-  "recaptchaSiteKey": ""
+  "projectId": "c4c-cameroon-2026",
+  "appId": "1:650285991628:web:535b5b920b60b8a4676469",
+  "apiKey": "AIzaSyBJBcdcOjuhhTuSOqDumXPf3QCulH9EeBE",
+  "authDomain": "c4c-cameroon-2026.firebaseapp.com",
+  "firestoreDatabaseId": "(default)",
+  "storageBucket": "c4c-cameroon-2026.firebasestorage.app",
+  "messagingSenderId": "650285991628",
+  "measurementId": ""
 }

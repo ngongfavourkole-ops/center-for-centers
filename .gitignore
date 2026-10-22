@@ -9,3 +9,6 @@ coverage/
 
 # local archive
 center-for-centers.zip
+
+# Firebase CLI cache
+.firebase/
