@@ -23,7 +23,7 @@ export const OpportunityDetailView: React.FC<OpportunityDetailViewProps> = ({
   onBack,
   onSelectOrganization,
 }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [showReportModal, setShowReportModal] = useState(false);
 
   const isFree = opportunity.cost === 0;
@@ -34,14 +34,14 @@ export const OpportunityDetailView: React.FC<OpportunityDetailViewProps> = ({
   const daysLeft = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   const isClosingSoon = daysLeft >= 0 && daysLeft <= 14;
 
-  const formattedDeadline = deadlineDate.toLocaleDateString('en-GB', {
+  const formattedDeadline = deadlineDate.toLocaleDateString(language === 'fr' ? 'fr-FR' : 'en-GB', {
     day: 'numeric',
     month: 'long',
     year: 'numeric',
   });
 
   const formattedStartDate = opportunity.startDate
-    ? new Date(opportunity.startDate).toLocaleDateString('en-GB', {
+    ? new Date(opportunity.startDate).toLocaleDateString(language === 'fr' ? 'fr-FR' : 'en-GB', {
         day: 'numeric',
         month: 'long',
         year: 'numeric',
@@ -56,18 +56,18 @@ export const OpportunityDetailView: React.FC<OpportunityDetailViewProps> = ({
           className="inline-flex items-center gap-1.5 text-xs font-bold text-[#16402E] hover:text-[#D95D39] transition-colors"
         >
           <ArrowLeft size={16} />
-          <span>Back to list</span>
+          <span>{t.backToList}</span>
         </button>
 
         <div className="flex items-center gap-2">
           <ShareButton
             title={opportunity.title}
-            text={`Check out this ${opportunity.category} in ${formatLocation(opportunity, t)}: ${opportunity.title}`}
+            text={t.shareTextOpp.replace('{location}', formatLocation(opportunity, t)).replace('{title}', opportunity.title)}
           />
           <button
             onClick={() => setShowReportModal(true)}
             className="text-xs text-[#555E57] hover:text-[#A51D24] font-medium flex items-center gap-1 border border-[#E2DDD5] px-2.5 py-2 rounded-sm bg-white"
-            title="Report incorrect information"
+            title={t.reportIncorrect}
           >
             <AlertTriangle size={13} className="text-[#A51D24]" />
             <span className="hidden sm:inline">Report issue</span>
@@ -89,7 +89,7 @@ export const OpportunityDetailView: React.FC<OpportunityDetailViewProps> = ({
           </h1>
           {opportunity.orgName && (
             <div className="mt-2 text-sm text-[#555E57] flex items-center gap-1.5 font-medium">
-              <span>Organized by:</span>
+              <span>{t.organizedBy}:</span>
               <span className="text-[#16402E] font-bold">{opportunity.orgName}</span>
             </div>
           )}
@@ -99,14 +99,14 @@ export const OpportunityDetailView: React.FC<OpportunityDetailViewProps> = ({
           <div>
             <div className="font-bold text-[#555E57] uppercase tracking-wider text-[11px] flex items-center gap-1 mb-1">
               <Calendar size={13} className="text-[#D95D39]" />
-              <span>Application Deadline</span>
+              <span>{t.deadlineLabel}</span>
             </div>
             <div className="font-bold text-[#1C211E] text-sm">
               {formattedDeadline}
             </div>
             {isClosingSoon && (
               <span className="text-[11px] text-[#D95D39] font-semibold">
-                Only {daysLeft} days remaining
+                {t.daysRemaining.replace('{days}', String(daysLeft))}
               </span>
             )}
           </div>
@@ -114,17 +114,17 @@ export const OpportunityDetailView: React.FC<OpportunityDetailViewProps> = ({
           <div>
             <div className="font-bold text-[#555E57] uppercase tracking-wider text-[11px] flex items-center gap-1 mb-1">
               <Calendar size={13} className="text-[#16402E]" />
-              <span>Start Date</span>
+              <span>{t.startDateLabel}</span>
             </div>
             <div className="font-bold text-[#1C211E] text-sm">
-              {formattedStartDate || 'Flexible / Upon acceptance'}
+              {formattedStartDate || t.flexibleStart}
             </div>
           </div>
 
           <div>
             <div className="font-bold text-[#555E57] uppercase tracking-wider text-[11px] flex items-center gap-1 mb-1">
               <MapPin size={13} className="text-[#16402E]" />
-              <span>Location</span>
+              <span>{t.locationLabel}</span>
             </div>
             <div className="font-bold text-[#1C211E] text-sm">
               {formatLocation(opportunity, t)}
@@ -135,7 +135,7 @@ export const OpportunityDetailView: React.FC<OpportunityDetailViewProps> = ({
         <div className="p-4 bg-[#EFE9DC] border-2 border-[#16402E] rounded-sm flex flex-col sm:flex-row items-center justify-between gap-4">
           <div>
             <div className="text-xs uppercase tracking-wider font-bold text-[#16402E]">
-              Participation Fee
+              {t.feeLabel}
             </div>
             <div className="font-heading font-extrabold text-xl text-[#1C211E]">
               {isFree ? '100% Free of charge' : `${opportunity.cost.toLocaleString()} XAF`}
@@ -152,12 +152,12 @@ export const OpportunityDetailView: React.FC<OpportunityDetailViewProps> = ({
               rel="noopener noreferrer"
               className="w-full sm:w-auto px-6 py-3 bg-[#D95D39] hover:bg-[#B84725] text-white font-bold text-sm rounded-sm transition-colors flex items-center justify-center gap-2 border border-[#B84725] shrink-0"
             >
-              <span>Register Now</span>
+              <span>{t.registerNow}</span>
               <ExternalLink size={16} />
             </a>
           ) : (
             <div className="text-xs text-[#555E57] font-medium bg-white px-3 py-2 border border-[#E2DDD5] rounded-sm">
-              Contact organization directly for registration
+              {t.contactToRegister}
             </div>
           )}
         </div>
@@ -167,7 +167,7 @@ export const OpportunityDetailView: React.FC<OpportunityDetailViewProps> = ({
 
         <div className="space-y-3 pt-2">
           <h2 className="font-heading font-bold text-lg text-[#1C211E] border-b border-[#E2DDD5] pb-1">
-            Program Description
+            {t.descriptionLabel}
           </h2>
           <p className="text-sm text-[#2C332E] leading-relaxed whitespace-pre-line">
             {opportunity.description}
@@ -177,7 +177,7 @@ export const OpportunityDetailView: React.FC<OpportunityDetailViewProps> = ({
         <div className="space-y-3 pt-2">
           <h2 className="font-heading font-bold text-lg text-[#1C211E] border-b border-[#E2DDD5] pb-1 flex items-center gap-1.5">
             <UserCheck size={18} className="text-[#16402E]" />
-            <span>Eligibility & Requirements</span>
+            <span>{t.eligibilityTitle}</span>
           </h2>
           <div className="bg-[#F8F5EE] border border-[#E2DDD5] p-4 rounded-sm text-sm text-[#2C332E] leading-relaxed">
             {opportunity.eligibility || 'Open to all interested applicants.'}
@@ -186,7 +186,7 @@ export const OpportunityDetailView: React.FC<OpportunityDetailViewProps> = ({
           {opportunity.educationLevels && opportunity.educationLevels.length > 0 && (
             <div className="pt-2">
               <span className="text-xs font-bold text-[#1C211E] block mb-1 uppercase tracking-wider">
-                Target Education Levels:
+                {t.targetLevels}:
               </span>
               <div className="flex flex-wrap gap-1.5">
                 {opportunity.educationLevels.map((lvl, idx) => (
@@ -205,7 +205,7 @@ export const OpportunityDetailView: React.FC<OpportunityDetailViewProps> = ({
           {opportunity.interests && opportunity.interests.length > 0 && (
             <div className="pt-2">
               <span className="text-xs font-bold text-[#1C211E] block mb-1 uppercase tracking-wider">
-                Focus Areas:
+                {t.focusAreas}:
               </span>
               <div className="flex flex-wrap gap-1.5">
                 {opportunity.interests.map((interest, idx) => (
@@ -224,7 +224,7 @@ export const OpportunityDetailView: React.FC<OpportunityDetailViewProps> = ({
         {organization && (
           <div className="pt-4 border-t-2 border-[#16402E]">
             <span className="text-xs font-bold text-[#555E57] uppercase tracking-wider block mb-2">
-              Host Organization
+              {t.hostOrg}
             </span>
             <div
               onClick={() => onSelectOrganization(organization)}
@@ -251,7 +251,7 @@ export const OpportunityDetailView: React.FC<OpportunityDetailViewProps> = ({
                 className="inline-flex items-center gap-1.5 text-xs font-bold text-[#16402E] group-hover:text-[#D95D39] shrink-0"
               >
                 <Building2 size={15} />
-                <span>View Full Access Specs</span>
+                <span>{t.viewAccessDetails}</span>
               </button>
             </div>
           </div>

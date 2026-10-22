@@ -240,6 +240,31 @@ service cloud.firestore {
       allow delete: if isAdmin() || (isSignedIn() && resource.data.orgId == request.auth.uid);
     }
 
+    // ---------- Live status ("Right now") ----------
+    // One document per approved place with the latest power and internet report.
+    // Any signed-in user may update one of the two, stamped with the server time and their uid.
+    match /liveStatus/{orgId} {
+      function changed() {
+        return request.resource.data.diff(resource == null ? {} : resource.data).affectedKeys();
+      }
+      allow get: if true;
+      allow list: if false;
+      allow create, update: if isSignedIn() &&
+        get(/databases/$(database)/documents/organizations/$(orgId)).data.status == 'approved' &&
+        request.resource.data.keys().hasOnly(['power', 'powerAt', 'powerBy', 'internet', 'internetAt', 'internetBy']) &&
+        (
+          (changed().hasOnly(['power', 'powerAt', 'powerBy']) &&
+            request.resource.data.power is bool &&
+            request.resource.data.powerAt == request.time &&
+            request.resource.data.powerBy == request.auth.uid) ||
+          (changed().hasOnly(['internet', 'internetAt', 'internetBy']) &&
+            request.resource.data.internet is bool &&
+            request.resource.data.internetAt == request.time &&
+            request.resource.data.internetBy == request.auth.uid)
+        );
+      allow delete: if isAdmin();
+    }
+
     // ---------- Venue requests ----------
     // Organizations ask the team to arrange an approved place. Only admins can read them.
     match /venueRequests/{requestId} {

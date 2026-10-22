@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { User } from 'firebase/auth';
 import { Organization, Opportunity } from '../types';
 import { RealAccessPanel } from '../components/RealAccessPanel';
+import { LiveStatusPanel } from '../components/LiveStatusPanel';
 import { OpportunityCard } from '../components/OpportunityCard';
 import { LocationBadge, TeamManagedBadge } from '../components/Badges';
 import { SocialLinks } from '../components/SocialLinks';
@@ -69,21 +70,21 @@ export const OrganizationProfileView: React.FC<OrganizationProfileViewProps> = (
           className="inline-flex items-center gap-1.5 text-xs font-bold text-[#16402E] hover:text-[#D95D39] transition-colors"
         >
           <ArrowLeft size={16} />
-          <span>Back to directory</span>
+          <span>{t.backToPlaces}</span>
         </button>
 
         <div className="flex items-center gap-2">
           <ShareButton
             title={organization.name}
-            text={`Access details and facilities for ${organization.name} in ${formatLocation(organization, t)}`}
+            text={t.shareTextPlace.replace('{name}', organization.name).replace('{location}', formatLocation(organization, t))}
           />
           <button
             onClick={() => setShowReportModal(true)}
             className="text-xs text-[#555E57] hover:text-[#A51D24] font-medium flex items-center gap-1 border border-[#E2DDD5] px-2.5 py-2 rounded-sm bg-white"
-            title="Report incorrect information"
+            title={t.reportIncorrect}
           >
             <AlertTriangle size={13} className="text-[#A51D24]" />
-            <span className="hidden sm:inline">Report issue</span>
+            <span className="hidden sm:inline">{t.reportIssue}</span>
           </button>
         </div>
       </div>
@@ -182,7 +183,8 @@ export const OrganizationProfileView: React.FC<OrganizationProfileViewProps> = (
         </section>
       )}
 
-      <section className="space-y-2">
+      <section className="space-y-4">
+        <LiveStatusPanel orgId={organization.id} user={user} onSignIn={onSignIn} />
         <RealAccessPanel organization={organization} />
       </section>
 
@@ -191,11 +193,11 @@ export const OrganizationProfileView: React.FC<OrganizationProfileViewProps> = (
           <div className="flex items-center gap-2">
             <Sparkles size={18} className="text-[#D95D39]" />
             <h2 className="font-heading font-extrabold text-xl text-[#1C211E]">
-              Opportunities from {organization.name}
+              {t.opportunitiesFrom.replace('{name}', organization.name)}
             </h2>
           </div>
           <span className="text-xs font-bold text-[#16402E] bg-[#EFE9DC] px-2 py-0.5 rounded-sm">
-            {orgOpportunities.length} active
+            {t.activeCount.replace('{count}', String(orgOpportunities.length))}
           </span>
         </div>
 
@@ -212,9 +214,9 @@ export const OrganizationProfileView: React.FC<OrganizationProfileViewProps> = (
         ) : (
           <div className="bg-white border border-[#E2DDD5] p-6 text-center rounded-sm">
             <Building2 size={24} className="text-[#777E79] mx-auto mb-2" />
-            <p className="font-bold text-sm text-[#1C211E]">No active public calls right now</p>
+            <p className="font-bold text-sm text-[#1C211E]">{t.noActiveCalls}</p>
             <p className="text-xs text-[#555E57] mt-1">
-              Check back soon or contact the organization directly using the phone or email listed above.
+              {t.noActiveCallsDesc}
             </p>
           </div>
         )}

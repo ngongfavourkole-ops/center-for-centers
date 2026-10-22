@@ -81,7 +81,7 @@ export const OrganizationsView: React.FC<OrganizationsViewProps> = ({
     <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
       <div className="border-b-2 border-[#16402E] pb-3">
         <h1 className="font-heading font-extrabold text-2xl sm:text-3xl text-[#1C211E]">
-          Centers & Educational Hubs
+          {t.placesTitle}
         </h1>
         <p className="text-xs sm:text-sm text-[#445048] mt-1">
           {t.placesSubtitle}
@@ -98,7 +98,7 @@ export const OrganizationsView: React.FC<OrganizationsViewProps> = ({
               aria-label={t.searchButton}
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              placeholder="Search by center name, address, or equipment..."
+              placeholder={t.placesSearchPlaceholder}
               className="w-full pl-10 pr-4 py-2 bg-[#F8F5EE] text-[#1C211E] text-sm rounded-sm border border-[#E2DDD5] focus:outline-none focus:border-[#16402E]"
             />
           </div>
@@ -148,14 +148,14 @@ export const OrganizationsView: React.FC<OrganizationsViewProps> = ({
         {hasActiveFilters && (
           <div className="pt-2 border-t border-[#E2DDD5] flex items-center justify-between text-xs">
             <span className="text-[#555E57]">
-              Showing {filteredOrganizations.length} of {organizations.length} centers
+              {t.showingCount.replace('{count}', String(filteredOrganizations.length)).replace('{total}', String(organizations.length))}
             </span>
             <button
               onClick={resetFilters}
               className="font-bold text-[#D95D39] hover:underline flex items-center gap-1"
             >
               <RotateCcw size={12} />
-              <span>Reset filters</span>
+              <span>{t.resetFilters}</span>
             </button>
           </div>
         )}
@@ -163,7 +163,7 @@ export const OrganizationsView: React.FC<OrganizationsViewProps> = ({
 
       <div>
         <div className="mb-3 text-xs text-[#555E57] font-medium">
-          {filteredOrganizations.length} organizations verified
+          {t.resultsCount.replace('{count}', String(filteredOrganizations.length))}
         </div>
 
         {filteredOrganizations.length > 0 ? (
@@ -183,10 +183,10 @@ export const OrganizationsView: React.FC<OrganizationsViewProps> = ({
         ) : (
           <div className="bg-white border-2 border-dashed border-[#E2DDD5] p-8 text-center rounded-sm">
             <p className="font-heading font-bold text-base text-[#1C211E] mb-1">
-              {organizations.length === 0 ? t.noPlacesYet : "No organizations found matching these filters"}
+              {organizations.length === 0 ? t.noPlacesYet : t.noMatchingResults}
             </p>
             <p className="text-xs text-[#555E57] mb-4">
-              {organizations.length === 0 ? t.noPlacesYetDesc : "Try clearing the search query or selecting a different town."}
+              {organizations.length === 0 ? t.noPlacesYetDesc : t.noMatchingResultsDesc}
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-2">
               {hasActiveFilters && (
@@ -194,7 +194,7 @@ export const OrganizationsView: React.FC<OrganizationsViewProps> = ({
                   onClick={resetFilters}
                   className="px-4 py-2 bg-[#16402E] text-white text-xs font-bold rounded-sm border border-[#0F2D20]"
                 >
-                  Clear filters
+                  {t.clearFilters}
                 </button>
               )}
               {searchQuery.trim() && onSearchOpportunities && (

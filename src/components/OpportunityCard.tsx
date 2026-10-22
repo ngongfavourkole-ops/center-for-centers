@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Opportunity } from '../types';
 import { FreeBadge, PaidBadge, ClosingSoonBadge, CategoryBadge, LocationBadge } from './Badges';
+import { useLanguage } from '../context/LanguageContext';
 import { Calendar, Building2, ArrowRight, Image as ImageIcon } from 'lucide-react';
 
 interface OpportunityCardProps {
@@ -9,6 +10,7 @@ interface OpportunityCardProps {
 }
 
 export const OpportunityCard: React.FC<OpportunityCardProps> = ({ opportunity, onSelect }) => {
+  const { t, language } = useLanguage();
   const [imageError, setImageError] = useState(false);
   const isFree = opportunity.cost === 0;
 
@@ -18,7 +20,7 @@ export const OpportunityCard: React.FC<OpportunityCardProps> = ({ opportunity, o
   const daysLeft = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   const isClosingSoon = daysLeft >= 0 && daysLeft <= 14;
 
-  const formattedDeadline = deadlineDate.toLocaleDateString('en-GB', {
+  const formattedDeadline = deadlineDate.toLocaleDateString(language === 'fr' ? 'fr-FR' : 'en-GB', {
     day: 'numeric',
     month: 'short',
     year: 'numeric',
@@ -44,7 +46,7 @@ export const OpportunityCard: React.FC<OpportunityCardProps> = ({ opportunity, o
             {opportunity.flyerUrl && (
               <span className="absolute top-2 right-2 bg-[#16402E] text-white text-[10px] font-bold px-2 py-0.5 rounded-sm flex items-center gap-1 shadow-xs border border-white/20">
                 <ImageIcon size={11} />
-                <span>Flyer Attached</span>
+                <span>{t.flyerAttached}</span>
               </span>
             )}
           </div>
@@ -98,7 +100,7 @@ export const OpportunityCard: React.FC<OpportunityCardProps> = ({ opportunity, o
           <span className="font-medium">Deadline: {formattedDeadline}</span>
         </div>
         <span className="inline-flex items-center gap-1 font-bold text-[#16402E] group-hover:text-[#D95D39] text-xs">
-          View details
+          {t.viewDetails}
           <ArrowRight size={13} />
         </span>
       </div>

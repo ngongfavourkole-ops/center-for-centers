@@ -11,6 +11,7 @@ import {
   where,
   limit,
   writeBatch,
+  serverTimestamp,
 } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from './firebase';
 import { Organization, Opportunity, Report, ApprovalStatus, UserProfile, UserRole, Claim, PlaceEdit } from '../types';
@@ -529,5 +530,42 @@ export async function submitVenueRequest(request: VenueRequest): Promise<void> {
     });
   } catch (error) {
     handleFirestoreError(error, OperationType.CREATE, 'venueRequests');
+  }
+}
+
+// Latest crowd report of power and internet at a place, one document per place.
+export interface LiveStatus {
+  power?: boolean;
+  powerAt?: Date;
+  internet?: boolean;
+  internetAt?: Date;
+}
+
+export async function fetchLiveStatus(orgId: string): Promise<LiveStatus | null> {
+  try {
+    const snap = await getDoc(doc(db, 'liveStatus', orgId));
+    if (!snap.exists()) return null;
+    const data = snap.data();
+    return {
+      power: data.power,
+      powerAt: data.powerAt?.toDate?.(),
+      internet: data.internet,
+      internetAt: data.internetAt?.toDate?.(),
+    };
+  } catch (error) {
+    handleFirestoreError(error, OperationType.GET, `liveStatus/${orgId}`);
+    return null;
+  }
+}
+
+export async function reportLiveStatus(orgId: string, uid: string, kind: 'power' | 'internet', value: boolean): Promise<void> {
+  try {
+    await setDoc(
+      doc(db, 'liveStatus', orgId),
+      { [kind]: value, [`${kind}At`]: serverTimestamp(), [`${kind}By`]: uid },
+      { merge: true }
+    );
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, `liveStatus/${orgId}`);
   }
 }

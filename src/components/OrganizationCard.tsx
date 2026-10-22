@@ -91,10 +91,10 @@ export const OrganizationCard: React.FC<OrganizationCardProps> = ({
       <div className="mx-4 pb-3.5 pt-2.5 border-t border-[#E2DDD5] flex items-center justify-between text-xs">
         <div className="flex items-center gap-1 text-[#16402E] font-medium text-[11px]">
           <ShieldCheck size={13} className="text-[#16402E]" />
-          <span>{opportunityCount !== undefined ? `${opportunityCount} active offers` : 'Verified specs'}</span>
+          <span>{opportunityCount !== undefined ? t.activeOffers.replace('{count}', String(opportunityCount)) : t.accessDetails}</span>
         </div>
         <span className="inline-flex items-center gap-1 font-bold text-[#16402E] group-hover:text-[#D95D39]">
-          View center
+          {t.viewPlace}
           <ArrowRight size={13} />
         </span>
       </div>

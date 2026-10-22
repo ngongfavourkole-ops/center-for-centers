@@ -5,9 +5,14 @@ import { formatLocation } from '../lib/regions';
 
 export const FreeBadge: React.FC<{ className?: string }> = ({ className = '' }) => (
   <span className={`inline-flex items-center text-[11px] font-bold tracking-wide uppercase px-2 py-0.5 rounded-sm bg-[#16402E] text-[#F8F5EE] border border-[#16402E] ${className}`}>
-    Free
+    <FreeLabel />
   </span>
 );
+
+const FreeLabel: React.FC = () => {
+  const { t } = useLanguage();
+  return <>{t.free}</>;
+};
 
 export const PaidBadge: React.FC<{ cost: number; className?: string }> = ({ cost, className = '' }) => (
   <span className={`inline-flex items-center text-[11px] font-bold tracking-wide px-2 py-0.5 rounded-sm bg-[#EFE9DC] text-[#1C211E] border border-[#E2DDD5] ${className}`}>
@@ -15,11 +20,14 @@ export const PaidBadge: React.FC<{ cost: number; className?: string }> = ({ cost
   </span>
 );
 
-export const ClosingSoonBadge: React.FC<{ daysLeft: number; className?: string }> = ({ daysLeft, className = '' }) => (
+export const ClosingSoonBadge: React.FC<{ daysLeft: number; className?: string }> = ({ daysLeft, className = '' }) => {
+  const { t } = useLanguage();
+  return (
   <span className={`inline-flex items-center text-[11px] font-bold tracking-wide uppercase px-2 py-0.5 rounded-sm bg-[#D95D39] text-[#FFFFFF] border border-[#B84725] ${className}`}>
-    {daysLeft <= 0 ? 'Closes today' : `Closes in ${daysLeft}d`}
+    {daysLeft <= 0 ? t.closesToday : t.closesInDays.replace('{days}', String(daysLeft))}
   </span>
-);
+  );
+};
 
 // Admin only: marks old demo records that are hidden from the public.
 export const SampleDataBadge: React.FC<{ className?: string }> = ({ className = '' }) => {
@@ -41,23 +49,24 @@ export const TeamManagedBadge: React.FC<{ className?: string }> = ({ className =
 };
 
 export const StatusBadge: React.FC<{ status: ApprovalStatus; className?: string }> = ({ status, className = '' }) => {
+  const { t } = useLanguage();
   switch (status) {
     case 'approved':
       return (
         <span className={`inline-flex items-center text-[11px] font-bold tracking-wide px-2 py-0.5 rounded-sm bg-[#16402E] text-white border border-[#16402E] ${className}`}>
-          Approved
+          {t.statusApproved}
         </span>
       );
     case 'pending':
       return (
         <span className={`inline-flex items-center text-[11px] font-bold tracking-wide px-2 py-0.5 rounded-sm bg-[#FFF4DE] text-[#8C5800] border border-[#F3D594] ${className}`}>
-          Pending review
+          {t.statusPending}
         </span>
       );
     case 'rejected':
       return (
         <span className={`inline-flex items-center text-[11px] font-bold tracking-wide px-2 py-0.5 rounded-sm bg-[#FCE8E6] text-[#A51D24] border border-[#F5C2C7] ${className}`}>
-          Needs revision
+          {t.statusRejected}
         </span>
       );
     default:
@@ -65,11 +74,14 @@ export const StatusBadge: React.FC<{ status: ApprovalStatus; className?: string 
   }
 };
 
-export const CategoryBadge: React.FC<{ category: string; className?: string }> = ({ category, className = '' }) => (
+export const CategoryBadge: React.FC<{ category: string; className?: string }> = ({ category, className = '' }) => {
+  const { t } = useLanguage();
+  return (
   <span className={`inline-flex items-center text-[11px] font-medium px-2 py-0.5 rounded-sm bg-[#EAE4D7] text-[#1C211E] border border-[#DDD6C8] ${className}`}>
-    {category}
+    {t.categoryNames[category] || category}
   </span>
-);
+  );
+};
 
 export const LocationBadge: React.FC<{ item: { region?: string; town?: string }; className?: string }> = ({
   item,

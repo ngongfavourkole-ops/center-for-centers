@@ -119,10 +119,10 @@ export const OpportunitiesView: React.FC<OpportunitiesViewProps> = ({
     <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
       <div className="border-b-2 border-[#16402E] pb-3">
         <h1 className="font-heading font-extrabold text-2xl sm:text-3xl text-[#1C211E]">
-          Verified Opportunities
+          {t.opportunitiesTitle}
         </h1>
         <p className="text-xs sm:text-sm text-[#445048] mt-1">
-          Showing active trainings, workshops, scholarships, and hackathons with verified deadlines.
+          {t.opportunitiesSubtitle}
         </p>
       </div>
 
@@ -136,7 +136,7 @@ export const OpportunitiesView: React.FC<OpportunitiesViewProps> = ({
               aria-label={t.searchButton}
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              placeholder="Search by keywords, skills, or organization name..."
+              placeholder={t.oppSearchPlaceholder}
               className="w-full pl-10 pr-4 py-2.5 bg-white text-[#1C211E] text-sm rounded-sm border border-[#E2DDD5] focus:outline-none focus:border-[#16402E]"
             />
           </div>
@@ -146,47 +146,47 @@ export const OpportunitiesView: React.FC<OpportunitiesViewProps> = ({
             className="sm:hidden px-4 py-2.5 bg-white border border-[#E2DDD5] text-[#1C211E] rounded-sm text-xs font-bold flex items-center justify-center gap-2"
           >
             <SlidersHorizontal size={15} />
-            <span>Filters {hasActiveFilters && '(Active)'}</span>
+            <span>{t.filtersButton} {hasActiveFilters && t.filtersActive}</span>
           </button>
         </div>
 
         <div className={`${showFiltersMobile ? 'block' : 'hidden'} sm:block bg-white border border-[#E2DDD5] p-4 rounded-sm space-y-3`}>
           <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-6 gap-3 text-xs">
             <div>
-              <label className="block font-bold text-[#1C211E] mb-1 uppercase tracking-wider text-[11px]">Category</label>
+              <label className="block font-bold text-[#1C211E] mb-1 uppercase tracking-wider text-[11px]">{t.categoryLabel}</label>
               <select
                 value={selectedCategory}
                 onChange={e => setSelectedCategory(e.target.value)}
                 className="w-full bg-[#F8F5EE] border border-[#E2DDD5] rounded-sm px-2.5 py-1.5 text-xs text-[#1C211E] focus:outline-none focus:border-[#16402E]"
               >
                 {categories.map(c => (
-                  <option key={c} value={c}>{c}</option>
+                  <option key={c} value={c}>{c === 'All' ? t.allOption : t.categoryNames[c] || c}</option>
                 ))}
               </select>
             </div>
 
             <div>
-              <label className="block font-bold text-[#1C211E] mb-1 uppercase tracking-wider text-[11px]">Interest</label>
+              <label className="block font-bold text-[#1C211E] mb-1 uppercase tracking-wider text-[11px]">{t.interestLabel}</label>
               <select
                 value={selectedInterest}
                 onChange={e => setSelectedInterest(e.target.value)}
                 className="w-full bg-[#F8F5EE] border border-[#E2DDD5] rounded-sm px-2.5 py-1.5 text-xs text-[#1C211E] focus:outline-none focus:border-[#16402E]"
               >
                 {interestsList.map(i => (
-                  <option key={i} value={i}>{i}</option>
+                  <option key={i} value={i}>{i === 'All' ? t.allOption : t.interestNames[i] || i}</option>
                 ))}
               </select>
             </div>
 
             <div>
-              <label className="block font-bold text-[#1C211E] mb-1 uppercase tracking-wider text-[11px]">Education level</label>
+              <label className="block font-bold text-[#1C211E] mb-1 uppercase tracking-wider text-[11px]">{t.educationLevelLabel}</label>
               <select
                 value={selectedEducation}
                 onChange={e => setSelectedEducation(e.target.value)}
                 className="w-full bg-[#F8F5EE] border border-[#E2DDD5] rounded-sm px-2.5 py-1.5 text-xs text-[#1C211E] focus:outline-none focus:border-[#16402E]"
               >
                 {educationList.map(e => (
-                  <option key={e} value={e}>{e}</option>
+                  <option key={e} value={e}>{e === 'All' ? t.allOption : t.educationNames[e] || e}</option>
                 ))}
               </select>
             </div>
@@ -219,15 +219,15 @@ export const OpportunitiesView: React.FC<OpportunitiesViewProps> = ({
             </div>
 
             <div>
-              <label className="block font-bold text-[#1C211E] mb-1 uppercase tracking-wider text-[11px]">Cost</label>
+              <label className="block font-bold text-[#1C211E] mb-1 uppercase tracking-wider text-[11px]">{t.costLabel}</label>
               <select
                 value={costFilter}
                 onChange={e => setCostFilter(e.target.value as any)}
                 className="w-full bg-[#F8F5EE] border border-[#E2DDD5] rounded-sm px-2.5 py-1.5 text-xs text-[#1C211E] focus:outline-none focus:border-[#16402E]"
               >
-                <option value="all">All (Free & Paid)</option>
-                <option value="free">Free only (0 XAF)</option>
-                <option value="paid">Paid only</option>
+                <option value="all">{t.costAll}</option>
+                <option value="free">{t.freeOnly}</option>
+                <option value="paid">{t.costPaid}</option>
               </select>
             </div>
           </div>
@@ -235,14 +235,14 @@ export const OpportunitiesView: React.FC<OpportunitiesViewProps> = ({
           {hasActiveFilters && (
             <div className="pt-2 border-t border-[#E2DDD5] flex items-center justify-between">
               <span className="text-[11px] text-[#555E57]">
-                Filtered {filteredOpportunities.length} of {opportunities.length} total active opportunities
+                {t.showingCount.replace('{count}', String(filteredOpportunities.length)).replace('{total}', String(opportunities.length))}
               </span>
               <button
                 onClick={resetFilters}
                 className="text-xs font-bold text-[#D95D39] hover:underline flex items-center gap-1"
               >
                 <RotateCcw size={12} />
-                <span>Reset filters</span>
+                <span>{t.resetFilters}</span>
               </button>
             </div>
           )}
@@ -251,8 +251,8 @@ export const OpportunitiesView: React.FC<OpportunitiesViewProps> = ({
 
       <div>
         <div className="flex items-center justify-between mb-3 text-xs text-[#555E57]">
-          <span>{filteredOpportunities.length} active opportunities found</span>
-          <span className="font-medium text-[#16402E]">Expired opportunities hidden automatically</span>
+          <span>{t.resultsCount.replace('{count}', String(filteredOpportunities.length))}</span>
+          
         </div>
 
         {filteredOpportunities.length > 0 ? (
@@ -268,10 +268,10 @@ export const OpportunitiesView: React.FC<OpportunitiesViewProps> = ({
         ) : (
           <div className="bg-white border-2 border-dashed border-[#E2DDD5] p-8 text-center rounded-sm">
             <p className="font-heading font-bold text-base text-[#1C211E] mb-1">
-              {opportunities.length === 0 ? t.noOpportunitiesYet : "No matching opportunities found"}
+              {opportunities.length === 0 ? t.noOpportunitiesYet : t.noMatchingResults}
             </p>
             <p className="text-xs text-[#555E57] max-w-sm mx-auto mb-4">
-              {opportunities.length === 0 ? t.noOpportunitiesYetDesc : "Try adjusting your filters, selecting a different town, or resetting the search query."}
+              {opportunities.length === 0 ? t.noOpportunitiesYetDesc : t.noMatchingResultsDesc}
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-2">
               {hasActiveFilters && (
@@ -279,7 +279,7 @@ export const OpportunitiesView: React.FC<OpportunitiesViewProps> = ({
                   onClick={resetFilters}
                   className="px-4 py-2 bg-[#16402E] text-white text-xs font-bold rounded-sm border border-[#0F2D20]"
                 >
-                  Clear all filters
+                  {t.clearFilters}
                 </button>
               )}
               {searchQuery.trim() && onSearchPlaces && (

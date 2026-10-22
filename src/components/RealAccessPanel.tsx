@@ -43,11 +43,11 @@ export const RealAccessPanel: React.FC<RealAccessPanelProps> = ({ organization, 
         <div className="flex items-center gap-2">
           <div className="w-2.5 h-2.5 rounded-full bg-[#D95D39]" />
           <h3 className="font-heading font-bold text-base sm:text-lg tracking-tight">
-            Can I realistically use this?
+            {t.canIUse}
           </h3>
         </div>
         <span className="text-[11px] font-semibold tracking-wide bg-[#0F2D20] px-2 py-0.5 rounded-sm text-[#E2DDD5]">
-          Verified access specs
+          {t.accessDetails}
         </span>
       </div>
 
@@ -55,7 +55,7 @@ export const RealAccessPanel: React.FC<RealAccessPanelProps> = ({ organization, 
         <div className="p-4 bg-[#FBF9F5] flex flex-col sm:flex-row sm:items-start gap-2">
           <div className="w-44 shrink-0 font-bold text-[#1C211E] flex items-center gap-1.5">
             <Users size={16} className="text-[#D95D39] shrink-0" />
-            <span>Who may use it:</span>
+            <span>{t.whoMayUse}:</span>
           </div>
           <div className="text-[#2C332E] leading-relaxed flex-1">
             {organization.studentAccess || t.unknown}
@@ -65,7 +65,7 @@ export const RealAccessPanel: React.FC<RealAccessPanelProps> = ({ organization, 
         <div className="p-4 flex flex-col sm:flex-row sm:items-start gap-2">
           <div className="w-44 shrink-0 font-bold text-[#1C211E] flex items-center gap-1.5">
             <Banknote size={16} className="text-[#16402E] shrink-0" />
-            <span>Fees & Costs:</span>
+            <span>{t.feesLabel}:</span>
           </div>
           <div className="text-[#2C332E] leading-relaxed flex-1 font-medium">
             {organization.fees || t.unknown}
@@ -76,14 +76,14 @@ export const RealAccessPanel: React.FC<RealAccessPanelProps> = ({ organization, 
           <div className="flex flex-col gap-1.5">
             <div className="font-bold text-[#1C211E] flex items-center gap-1.5 text-xs uppercase tracking-wider">
               <Zap size={15} className="text-[#D95D39]" />
-              <span>Power Reliability</span>
+              <span>{t.powerLabel}</span>
             </div>
             <div className="flex items-center gap-2">
               <span className={`inline-block text-xs font-bold px-2.5 py-1 rounded-sm ${getPowerColor(organization.powerReliability)}`}>
                 {t.powerNames[organization.powerReliability || 'Unknown'] || organization.powerReliability}
               </span>
               {organization.powerReliability === 'Backup power available' && (
-                <span className="text-[12px] text-[#445048]">Generator or Solar inverter on site</span>
+                <span className="text-[12px] text-[#445048]">{t.backupPowerNote}</span>
               )}
             </div>
           </div>
@@ -91,21 +91,21 @@ export const RealAccessPanel: React.FC<RealAccessPanelProps> = ({ organization, 
           <div className="flex flex-col gap-1.5">
             <div className="font-bold text-[#1C211E] flex items-center gap-1.5 text-xs uppercase tracking-wider">
               <Wifi size={15} className="text-[#16402E]" />
-              <span>Internet Reliability</span>
+              <span>{t.internetLabel}</span>
             </div>
             <div className="flex items-center gap-2">
               <span className={`inline-block text-xs font-bold px-2.5 py-1 rounded-sm ${getInternetColor(organization.internetReliability)}`}>
                 {t.internetNames[organization.internetReliability || 'Unknown'] || organization.internetReliability}
               </span>
               {organization.internetReliability === 'Stable' && (
-                <span className="text-[12px] text-[#445048]">Fiber or high-speed broadband</span>
+                <span className="text-[12px] text-[#445048]">{t.stableInternetNote}</span>
               )}
             </div>
           </div>
         </div>
 
         <div className="p-4 flex flex-col sm:flex-row sm:items-start gap-2">
-          <div className="w-44 shrink-0 font-bold text-[#1C211E]">Facilities available:</div>
+          <div className="w-44 shrink-0 font-bold text-[#1C211E]">{t.facilitiesLabel}:</div>
           <div className="flex-1 flex flex-wrap gap-1.5">
             {organization.facilities && organization.facilities.length > 0 ? (
               organization.facilities.map((fac, idx) => (
@@ -126,7 +126,7 @@ export const RealAccessPanel: React.FC<RealAccessPanelProps> = ({ organization, 
           <div className="flex items-start gap-2">
             <Clock size={16} className="text-[#16402E] shrink-0 mt-0.5" />
             <div>
-              <div className="font-bold text-[#1C211E] text-xs uppercase tracking-wider">Opening Hours</div>
+              <div className="font-bold text-[#1C211E] text-xs uppercase tracking-wider">{t.openingHoursLabel}</div>
               <div className="text-[#2C332E] mt-0.5 font-medium">{organization.openingHours || t.unknown}</div>
             </div>
           </div>
@@ -134,7 +134,7 @@ export const RealAccessPanel: React.FC<RealAccessPanelProps> = ({ organization, 
           <div className="flex items-start gap-2">
             <CalendarCheck size={16} className="text-[#D95D39] shrink-0 mt-0.5" />
             <div>
-              <div className="font-bold text-[#1C211E] text-xs uppercase tracking-wider">Booking Condition</div>
+              <div className="font-bold text-[#1C211E] text-xs uppercase tracking-wider">{t.bookingLabel}</div>
               <div className="mt-0.5">
                 {organization.bookingRequired === true ? (
                   <span className="text-xs font-bold text-[#A51D24] bg-[#FCE8E6] border border-[#F5C2C7] px-2 py-0.5 rounded-sm">
@@ -157,10 +157,10 @@ export const RealAccessPanel: React.FC<RealAccessPanelProps> = ({ organization, 
         <div className="px-4 py-2.5 bg-[#EAE4D7] flex items-center justify-between text-xs text-[#445048]">
           <div className="flex items-center gap-1.5">
             <ShieldAlert size={14} className="text-[#16402E]" />
-            <span>Information verified by Center for Centers team</span>
+            <span>{organization.managedBy === 'team' ? t.infoSourceTeam : t.infoSourceOwner}</span>
           </div>
           <span className="font-semibold text-[#1C211E]">
-            Last confirmed: {organization.lastConfirmed || t.unknown}
+            {t.lastConfirmed}: {organization.lastConfirmed || t.unknown}
           </span>
         </div>
       </div>

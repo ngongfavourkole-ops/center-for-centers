@@ -7,6 +7,7 @@ import { Organization, Opportunity, NavFilters, UserProfile } from './types';
 import { useLanguage } from './context/LanguageContext';
 import { Logo } from './components/Logo';
 import { RoleSelectionModal } from './components/RoleSelectionModal';
+import { LanguageSwitch } from './components/LanguageSwitch';
 import { HomeView } from './views/HomeView';
 import { OpportunitiesView } from './views/OpportunitiesView';
 import { OpportunityDetailView } from './views/OpportunityDetailView';
@@ -288,9 +289,10 @@ export default function App() {
           {/* Logo */}
           <button
             onClick={() => handleNavigateTab('home')}
-            className="flex items-center text-left focus:outline-none"
+            aria-label={t.appName}
+            className="flex items-center text-left shrink-0 focus-visible:outline-2 focus-visible:outline-[#D95D39]"
           >
-            <Logo size="md" />
+            <Logo size="md" compact />
           </button>
 
           {/* Desktop Navigation Links */}
@@ -337,16 +339,18 @@ export default function App() {
             )}
           </nav>
 
-          {/* User Sign In / Profile Action */}
+          {/* Language switch and sign in / profile */}
           <div className="flex items-center gap-2">
+            <LanguageSwitch />
             {!authLoading && !user && (
               <button
                 onClick={handleGoogleSignIn}
+                aria-label={t.signIn}
                 className="px-3.5 py-2 bg-[#16402E] hover:bg-[#0F2D20] text-white text-xs font-bold rounded-sm border border-[#0F2D20] flex items-center gap-1.5 transition-colors"
               >
                 <LogIn size={14} aria-hidden="true" />
                 <span className="hidden sm:inline">{t.signIn}</span>
-                <span className="sm:hidden">{t.signInShort}</span>
+                <span className="hidden min-[400px]:inline sm:hidden">{t.signInShort}</span>
               </button>
             )}
 
@@ -505,11 +509,11 @@ export default function App() {
           </div>
 
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 text-[11px] text-[#E2DDD5]">
-            <span>Volcanic Charcoal & Forest Green Design</span>
+            <span>{t.footerChip1}</span>
             <span className="hidden sm:inline">•</span>
-            <span>Zero login walls for students</span>
+            <span>{t.footerChip2}</span>
             <span className="hidden sm:inline">•</span>
-            <span>Mobile-First PWA</span>
+            <span>{t.footerChip3}</span>
           </div>
         </div>
       </footer>

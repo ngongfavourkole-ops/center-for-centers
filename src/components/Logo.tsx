@@ -3,6 +3,8 @@ import React from 'react';
 interface LogoProps {
   size?: 'sm' | 'md' | 'lg';
   showTagline?: boolean;
+  // Hide the full name on very small screens (header), keeping the mark and "C4C"
+  compact?: boolean;
   className?: string;
 }
 
@@ -38,7 +40,7 @@ export const ContourMotifBackground: React.FC<{ className?: string }> = ({ class
   </svg>
 );
 
-export const Logo: React.FC<LogoProps> = ({ size = 'md', showTagline = false, className = '' }) => {
+export const Logo: React.FC<LogoProps> = ({ size = 'md', showTagline = false, compact = false, className = '' }) => {
   const iconSizes = { sm: 22, md: 28, lg: 38 };
   return (
     <div className={`flex items-center gap-2.5 ${className}`}>
@@ -47,7 +49,7 @@ export const Logo: React.FC<LogoProps> = ({ size = 'md', showTagline = false, cl
       </div>
       <div className="flex flex-col">
         <div className="flex items-center gap-1.5 leading-none">
-          <span className="font-heading font-extrabold text-[#16402E] tracking-tight text-lg sm:text-xl">
+          <span className={`font-heading font-extrabold text-[#16402E] tracking-tight text-lg sm:text-xl whitespace-nowrap ${compact ? 'hidden min-[480px]:inline' : ''}`}>
             Center for Centers
           </span>
           <span className="bg-[#16402E] text-[#F8F5EE] text-[10px] font-bold px-1.5 py-0.5 rounded-sm tracking-wider">

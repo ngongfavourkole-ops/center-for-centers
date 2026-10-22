@@ -76,7 +76,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
           </div>
 
           <h1 className="font-heading font-extrabold text-2xl sm:text-4xl lg:text-5xl tracking-tight leading-tight mb-3">
-            One center that connects you to every other center.
+            {t.heroTitle}
           </h1>
 
           <p className="text-sm sm:text-base text-[#E2DDD5] max-w-2xl leading-relaxed mb-6">
@@ -125,30 +125,30 @@ export const HomeView: React.FC<HomeViewProps> = ({
           </button>
 
           <div className="mt-4 flex flex-wrap items-center gap-1.5 text-xs">
-            <span className="text-[#C4C0B6] font-medium text-[11px] mr-1">Quick filters:</span>
+            <span className="text-[#C4C0B6] font-medium text-[11px] mr-1">{t.quickFilters}</span>
             <button
               onClick={() => onNavigateTab('opportunities', { cost: 'free' })}
               className="px-2.5 py-1 bg-[#0F2D20] hover:bg-[#215A42] text-white rounded-sm border border-[#2B543D] text-[11px] font-semibold transition-colors"
             >
-              Free only
+              {t.freeOnly}
             </button>
             <button
               onClick={() => onNavigateTab('opportunities', { category: 'Training' })}
               className="px-2.5 py-1 bg-[#0F2D20] hover:bg-[#215A42] text-white rounded-sm border border-[#2B543D] text-[11px] font-semibold transition-colors"
             >
-              Trainings
+              {t.trainingsChip}
             </button>
             <button
               onClick={() => onNavigateTab('opportunities', { category: 'Scholarship' })}
               className="px-2.5 py-1 bg-[#0F2D20] hover:bg-[#215A42] text-white rounded-sm border border-[#2B543D] text-[11px] font-semibold transition-colors"
             >
-              Scholarships
+              {t.scholarshipsChip}
             </button>
             <button
               onClick={() => onNavigateTab('opportunities', { category: 'Hackathon' })}
               className="px-2.5 py-1 bg-[#0F2D20] hover:bg-[#215A42] text-white rounded-sm border border-[#2B543D] text-[11px] font-semibold transition-colors"
             >
-              Hackathons
+              {t.hackathonsChip}
             </button>
             <button
               onClick={() => onNavigateTab('opportunities', { region: 'Online' })}
@@ -166,17 +166,17 @@ export const HomeView: React.FC<HomeViewProps> = ({
             <div>
               <div className="flex items-center gap-1.5 text-xs font-bold text-[#D95D39] uppercase tracking-wider">
                 <Sparkles size={14} />
-                <span>Urgent Deadlines</span>
+                <span>{t.urgentDeadlines}</span>
               </div>
               <h2 className="font-heading font-extrabold text-xl sm:text-2xl text-[#1C211E]">
-                Closing soon
+                {t.closingSoon}
               </h2>
             </div>
             <button
               onClick={() => onNavigateTab('opportunities')}
               className="text-xs font-bold text-[#16402E] hover:text-[#D95D39] flex items-center gap-1 pb-1"
             >
-              <span>View all ({activeOpportunities.length})</span>
+              <span>{t.viewAllCount.replace('{count}', String(activeOpportunities.length))}</span>
               <ArrowRight size={14} />
             </button>
           </div>
@@ -193,7 +193,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
             </div>
           ) : (
             <div className="bg-white border border-[#E2DDD5] p-6 text-center rounded-sm">
-              <p className="text-sm text-[#555E57]">No opportunities closing this week.</p>
+              <p className="text-sm text-[#555E57]">{t.noneClosingSoon}</p>
             </div>
           )}
         </section>
@@ -203,17 +203,17 @@ export const HomeView: React.FC<HomeViewProps> = ({
             <div>
               <div className="flex items-center gap-1.5 text-xs font-bold text-[#16402E] uppercase tracking-wider">
                 <BookOpen size={14} />
-                <span>Zero Cost Barrier</span>
+                <span>{t.zeroCost}</span>
               </div>
               <h2 className="font-heading font-extrabold text-xl sm:text-2xl text-[#1C211E]">
-                Free opportunities
+                {t.freeOpportunities}
               </h2>
             </div>
             <button
               onClick={() => onNavigateTab('opportunities', { cost: 'free' })}
               className="text-xs font-bold text-[#16402E] hover:text-[#D95D39] flex items-center gap-1 pb-1"
             >
-              <span>View all free</span>
+              <span>{t.viewAllFree}</span>
               <ArrowRight size={14} />
             </button>
           </div>
@@ -238,13 +238,13 @@ export const HomeView: React.FC<HomeViewProps> = ({
             <div className="space-y-2 max-w-2xl">
               <div className="flex items-center gap-1.5 text-xs font-bold text-[#16402E] uppercase tracking-wider">
                 <Building2 size={16} />
-                <span>Directory of Spaces</span>
+                <span>{t.directoryLabel}</span>
               </div>
               <h3 className="font-heading font-extrabold text-xl sm:text-2xl text-[#1C211E]">
-                Learning centers, technology hubs and NGO workspaces
+                {t.directoryTitle}
               </h3>
               <p className="text-xs sm:text-sm text-[#445048] leading-relaxed">
-                Need reliable electricity during load shedding or quiet study space? We document which hubs have backup solar or generator power, stable fiber, and open desk policies.
+                {t.directoryDesc}
               </p>
             </div>
 
@@ -253,7 +253,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
               className="px-5 py-3 bg-[#16402E] hover:bg-[#0F2D20] text-white font-bold text-sm rounded-sm transition-colors flex items-center justify-center gap-2 shrink-0 border border-[#0F2D20]"
             >
               <Compass size={16} />
-              <span>Browse all {organizations.length} centers</span>
+              <span>{t.browseAllPlaces.replace('{count}', String(organizations.length))}</span>
             </button>
           </div>
 
