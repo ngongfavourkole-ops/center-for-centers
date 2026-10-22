@@ -1,0 +1,91 @@
+{
+  "entities": {
+    "Organization": {
+      "title": "Organization",
+      "description": "Learning centers, tech hubs, NGOs and educational institutions in Cameroon",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "maxLength": 100 },
+        "type": { "type": "string", "maxLength": 50 },
+        "town": { "type": "string", "maxLength": 50 },
+        "address": { "type": "string", "maxLength": 200 },
+        "contactPhone": { "type": "string", "maxLength": 30 },
+        "contactEmail": { "type": "string", "maxLength": 100 },
+        "website": { "type": "string", "maxLength": 200 },
+        "description": { "type": "string", "maxLength": 2000 },
+        "facilities": { "type": "array", "description": "List of available facilities" },
+        "studentAccess": { "type": "string", "maxLength": 1000 },
+        "fees": { "type": "string", "maxLength": 500 },
+        "openingHours": { "type": "string", "maxLength": 200 },
+        "powerReliability": { "type": "string", "enum": ["Backup power available", "Grid power only", "Unreliable power", "Unknown"] },
+        "internetReliability": { "type": "string", "enum": ["Stable", "Limited", "None", "Unknown"] },
+        "bookingRequired": { "type": "boolean" },
+        "lastConfirmed": { "type": "string", "maxLength": 50 },
+        "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+        "isSample": { "type": "boolean" },
+        "ownerUid": { "type": "string", "maxLength": 128 },
+        "createdAt": { "type": "string", "maxLength": 50 }
+      },
+      "required": ["name", "type", "town", "ownerUid", "status"]
+    },
+    "Opportunity": {
+      "title": "Opportunity",
+      "description": "Trainings, workshops, internships, hackathons, and scholarships",
+      "type": "object",
+      "properties": {
+        "orgId": { "type": "string", "maxLength": 128 },
+        "orgName": { "type": "string", "maxLength": 100 },
+        "title": { "type": "string", "maxLength": 150 },
+        "category": { "type": "string", "maxLength": 50 },
+        "description": { "type": "string", "maxLength": 3000 },
+        "interests": { "type": "array", "description": "Tags of fields of interest" },
+        "educationLevels": { "type": "array", "description": "Target education levels" },
+        "town": { "type": "string", "maxLength": 50 },
+        "startDate": { "type": "string", "maxLength": 50 },
+        "deadline": { "type": "string", "maxLength": 50 },
+        "cost": { "type": "number" },
+        "costNote": { "type": "string", "maxLength": 300 },
+        "eligibility": { "type": "string", "maxLength": 1000 },
+        "registrationLink": { "type": "string", "maxLength": 500 },
+        "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+        "isSample": { "type": "boolean" },
+        "createdAt": { "type": "string", "maxLength": 50 }
+      },
+      "required": ["orgId", "title", "category", "status", "deadline"]
+    },
+    "Report": {
+      "title": "Report",
+      "description": "User reports of inaccurate information",
+      "type": "object",
+      "properties": {
+        "targetType": { "type": "string", "enum": ["organization", "opportunity"] },
+        "targetId": { "type": "string", "maxLength": 128 },
+        "targetTitle": { "type": "string", "maxLength": 150 },
+        "reason": { "type": "string", "maxLength": 200 },
+        "details": { "type": "string", "maxLength": 1000 },
+        "reporterEmail": { "type": "string", "maxLength": 100 },
+        "status": { "type": "string", "enum": ["new", "reviewed", "resolved"] },
+        "createdAt": { "type": "string", "maxLength": 50 }
+      },
+      "required": ["targetType", "targetId", "reason", "details"]
+    }
+  },
+  "firestore": {
+    "/organizations/{orgId}": {
+      "schema": "Organization",
+      "description": "Organization directory profile keyed by owner UID"
+    },
+    "/opportunities/{opportunityId}": {
+      "schema": "Opportunity",
+      "description": "Educational and career opportunities offered by organizations"
+    },
+    "/reports/{reportId}": {
+      "schema": "Report",
+      "description": "Issue reports submitted by users"
+    },
+    "/admins/{adminUid}": {
+      "schema": { "$ref": "#/entities/Organization" },
+      "description": "Admin configuration records"
+    }
+  }
+}

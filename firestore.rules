@@ -1,0 +1,111 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        (request.auth.token.email != null && (
+          request.auth.token.email.lower() == 'ngongfavourkole@gmail.com' ||
+          request.auth.token.email.lower() == 'admin@centerforcenters.cm'
+        )) ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Admins collection
+    match /admins/{adminId} {
+      allow read: if isAdmin();
+      allow write: if isAdmin();
+    }
+
+    // Organizations collection
+    // Document ID is the owner's UID
+    match /organizations/{orgId} {
+      // Anyone can get or list approved organizations
+      // Admins can read all (approved, pending, rejected)
+      // Owners can read their own organization
+      allow get: if resource.data.status == 'approved' || (isSignedIn() && (request.auth.uid == orgId || isAdmin()));
+      allow list: if resource.data.status == 'approved' || (isSignedIn() && (resource.data.ownerUid == request.auth.uid || isAdmin()));
+
+      // Create: Owner can create their own doc with status 'pending' (or admin can create approved/sample)
+      allow create: if (
+        isAdmin() || (
+          isSignedIn() &&
+          request.auth.uid == orgId &&
+          request.resource.data.ownerUid == request.auth.uid &&
+          request.resource.data.status == 'pending' &&
+          request.resource.data.isSample == false
+        )
+      );
+
+      // Update: Owner can update their own organization but status must remain or reset to 'pending'.
+      // Admins can update any field including status and isSample.
+      allow update: if (
+        isAdmin() || (
+          isSignedIn() &&
+          request.auth.uid == orgId &&
+          request.resource.data.ownerUid == request.auth.uid &&
+          request.resource.data.status == 'pending' &&
+          request.resource.data.isSample == resource.data.isSample
+        )
+      );
+
+      // Delete: Admins or owner can delete
+      allow delete: if isAdmin() || (isSignedIn() && request.auth.uid == orgId);
+    }
+
+    // Opportunities collection
+    match /opportunities/{opportunityId} {
+      // Public read for approved
+      // Admins can read any
+      // Owners can read their own opportunities
+      allow get: if resource.data.status == 'approved' || (isSignedIn() && (resource.data.orgId == request.auth.uid || isAdmin()));
+      allow list: if resource.data.status == 'approved' || (isSignedIn() && (resource.data.orgId == request.auth.uid || isAdmin()));
+
+      // Create: Org owner can create opportunities for their org with status 'pending'
+      // Admins can create any (including sample or approved)
+      allow create: if (
+        isAdmin() || (
+          isSignedIn() &&
+          request.resource.data.orgId == request.auth.uid &&
+          request.resource.data.status == 'pending' &&
+          request.resource.data.isSample == false
+        )
+      );
+
+      // Update: Org owner can update their own opportunity, but status must be 'pending'
+      // Admins can update any field including approving/rejecting
+      allow update: if (
+        isAdmin() || (
+          isSignedIn() &&
+          resource.data.orgId == request.auth.uid &&
+          request.resource.data.orgId == request.auth.uid &&
+          request.resource.data.status == 'pending' &&
+          request.resource.data.isSample == resource.data.isSample
+        )
+      );
+
+      // Delete: Org owner or Admin
+      allow delete: if isAdmin() || (isSignedIn() && resource.data.orgId == request.auth.uid);
+    }
+
+    // Reports collection
+    match /reports/{reportId} {
+      // Anyone can create a report
+      allow create: if request.resource.data.targetId is string &&
+                       request.resource.data.reason is string &&
+                       request.resource.data.details is string;
+      // Only admins can read, update, or delete reports
+      allow read, update, delete: if isAdmin();
+    }
+  }
+}
